@@ -1,4 +1,4 @@
 Flask
 termcolor
-Werkzeug.security==0.16.0
+Werkzeug==0.16.0
 gunicorn
