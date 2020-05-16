@@ -1,0 +1,3 @@
+Flask
+termcolor
+werkzeug.security==0.16.0
