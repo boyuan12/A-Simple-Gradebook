@@ -4,6 +4,8 @@ from helpers import upload_file, send_email, random_string, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from termcolor import colored
 from werkzeug.exceptions import HTTPException
+from openpyxl import load_workbook
+import os
 
 """import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
@@ -108,6 +110,7 @@ def verify(token):
         return render_template("error.html", title="Wrong Verification Token", details="You provided wrong token or the email already verified. Please double check your email token. Thanks.")
 
     c.execute("UPDATE users SET verification=:verify WHERE verification=:token", {"verify": "verify", "token": token})
+    conn.commit()
 
     flash("Your email is successfully verified. Please login", category="success")
 
@@ -170,13 +173,33 @@ def district_admin_dashboard_school(code):
         abort(403)
 
     if request.method == "POST":
-        if request.form.get("school") and request.form.get("address") and request.form.ge:
+        if request.form.get("name") and request.form.get("address") and request.form.get("description") and request.form.get("code"):
             # handle when the user submit a form manually
-            pass
+            c.execute("INSERT INTO schools (district_id, name, address, description, code) VALUES (:district_id, :name, :address, :description, :code)", {"district_id": int(district), "name": request.form.get("name"), "address": request.form.get("address"), "description": request.form.get("description"), "code": request.form.get("code")})
+            conn.commit()
+            return redirect(f"/district-admin/{code}/schools")
 
         elif request.files["excel"]:
             # handle when user submit an excel
-            pass
+            filename = upload_file(app.config["UPLOAD_FOLDER"])
+            wb = load_workbook(os.path.join(app.config["UPLOAD_FOLDER"], filename))
+            sheet = wb.active
+
+            # check if the columns is 4
+            if sheet.max_columns != 4:
+                flash("Wrong Format: Did you have EXACTLY 4 columns?", category="danger")
+                return redirect(f"/district-admin/{code}/schools")
+
+            for i in range(1, sheet.max_rows+1):
+                name = sheet.cell(row=i, column=1)
+                address = sheet.cell(row=i, column=2)
+                description = sheet.cell(row=i, column=3)
+                code = sheet.cell(row=i, column=4)
+
+                c.execute("INSERT INTO schools (district_id, name, address, description, code) VALUES (:district_id, :name, :address, :description, :code)", {"district_id": int(district), "name": name, "address": address, "description": description, "code": code})
+                conn.commit()
+
+            return redirect(f"/district-admin/{code}/schools")
 
     else:
         schools = c.execute("SELECT * FROM schools WHERE district_id=:district_id", {"district_id": district}).fetchall()
