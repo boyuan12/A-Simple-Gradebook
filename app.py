@@ -166,8 +166,13 @@ def district_admin_homepage(code):
 @login_required
 def district_admin_dashboard_school(code):
 
+    d_code = code
+
     user_info = c.execute("SELECT * FROM users WHERE user_id=:user_id", {"user_id": session.get("user_id")}).fetchall()
-    district = c.execute("SELECT * FROM districts WHERE code=:code", {"code": code}).fetchall()[0][0]
+    try:
+        district = c.execute("SELECT * FROM districts WHERE code=:code", {"code": code}).fetchall()[0][0]
+    except IndexError:
+        abort(403)
 
     if user_info[0][5] != "district-admin" or user_info[0][6] != district:
         abort(403)
@@ -177,29 +182,31 @@ def district_admin_dashboard_school(code):
             # handle when the user submit a form manually
             c.execute("INSERT INTO schools (district_id, name, address, description, code) VALUES (:district_id, :name, :address, :description, :code)", {"district_id": int(district), "name": request.form.get("name"), "address": request.form.get("address"), "description": request.form.get("description"), "code": request.form.get("code")})
             conn.commit()
-            return redirect(f"/district-admin/{code}/schools")
+            return redirect(f"/district-admin/{d_code}/schools")
 
-        elif request.files["excel"]:
+        elif request.files["file"]:
             # handle when user submit an excel
             filename = upload_file(app.config["UPLOAD_FOLDER"])
             wb = load_workbook(os.path.join(app.config["UPLOAD_FOLDER"], filename))
             sheet = wb.active
 
             # check if the columns is 4
-            if sheet.max_columns != 4:
+            if sheet.max_column != 4:
                 flash("Wrong Format: Did you have EXACTLY 4 columns?", category="danger")
-                return redirect(f"/district-admin/{code}/schools")
+                return redirect(f"/district-admin/{d_code}/schools")
 
-            for i in range(1, sheet.max_rows+1):
-                name = sheet.cell(row=i, column=1)
-                address = sheet.cell(row=i, column=2)
-                description = sheet.cell(row=i, column=3)
-                code = sheet.cell(row=i, column=4)
+            for i in range(2, sheet.max_row+1):
+                name = sheet.cell(row=i, column=1).value
+                print(colored(name, "red"))
+                address = sheet.cell(row=i, column=2).value
+                description = sheet.cell(row=i, column=3).value
+                code = sheet.cell(row=i, column=4).value
 
                 c.execute("INSERT INTO schools (district_id, name, address, description, code) VALUES (:district_id, :name, :address, :description, :code)", {"district_id": int(district), "name": name, "address": address, "description": description, "code": code})
                 conn.commit()
 
-            return redirect(f"/district-admin/{code}/schools")
+            os.remove(os.path.join(app.config["UPLOAD_FOLDER"], filename))
+            return redirect(f"/district-admin/{d_code}/schools")
 
     else:
         schools = c.execute("SELECT * FROM schools WHERE district_id=:district_id", {"district_id": district}).fetchall()

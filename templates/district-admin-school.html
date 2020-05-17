@@ -32,10 +32,10 @@
   <hr>
   <p>Or upload an excel file. Please fill out the information accordingly. Here is an example excel file, and here is the <a href="/static/District-Upload-School-Template.xlsx">template</a>.</p>
 
-  <form action="/district-admin/{{ code }}/schools">
+  <form action="/district-admin/{{ code }}/schools" method="POST" enctype="multipart/form-data">
     <div class="form-group">
       <label for="exampleInputEmail1">Excel File </label>
-      <input type="file" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" name="excel" required accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+      <input type="file" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" name="file" required accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
     </div>
     <button type="submit" class="btn btn-primary">Submit</button>
   </form>
@@ -53,14 +53,14 @@
         </tr>
       </thead>
       <tbody>
-        <tr>
-          {% for school in schools %}
+        {% for school in schools %}
+          <tr>
             <td>{{ school[0] }}</td>
             <td>{{ school[2] }}</td>
             <td>{{ school[3] }}</td>
             <td>{{ school[4] }}</td>
-          {% endfor %}
-        </tr>
+          </tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>
