@@ -3,3 +3,4 @@ termcolor
 Werkzeug==0.16.0
 gunicorn
 openpyxl
+requests

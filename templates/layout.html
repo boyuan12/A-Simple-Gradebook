@@ -19,12 +19,12 @@
             }
 
             .footer {
-              position: absolute;
-              bottom: 0;
-              width: 100%;
-              height: 60px; /* Set the fixed height of the footer here */
-              line-height: 60px; /* Vertically center the text there */
-              background-color: #f5f5f5;
+                position: absolute;
+                bottom: 0;
+                width: 100%;
+                height: 60px; /* Set the fixed height of the footer here */
+                line-height: 60px; /* Vertically center the text there */
+                background-color: #f5f5f5;
             }
         </style>
     </head>
@@ -73,12 +73,12 @@
                 <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
               </form>
               -->
-              <img src="/static/beta.png" width="50px" height="50px">
+              <img src="/static/beta.png" width="50px" height="50px"> <small>(Made from <a href="https://www.flaticon.com/" title="Flaticon"> www.flaticon.com</a>)</small>
             </div>
         </nav>
         <div class="alert alert-warning">
           <button type="button" class="close" data-dismiss="alert">&times;</button>
-          IMPORTANT!: We are currently in beta mode, so anything may change at any moment. Note that this is an INCOMPLETE website! Thanks!
+          IMPORTANT!: We are currently in beta mode, so anything may change at any moment. Note that this is an INCOMPLETE website! Thanks! <small>The beta image (<img src="/static/beta.png" width="25px" height="25px">) is made by <a href="https://www.flaticon.com/authors/flat-icons" title="Flat Icons">Flat Icons</a> from <a href="https://www.flaticon.com/" title="Flaticon"> www.flaticon.com</a></small>
         </div>
         {% for message in get_flashed_messages(with_categories=True) %}
             <div class="alert alert-{{ message[0] }}">
@@ -89,10 +89,5 @@
         <div id="main">
             {% block main %}{% endblock %}
         </div>
-        <footer class="footer">
-          <div class="container">
-            <small>The beta image (<img src="/static/beta.png" width="25px" height="25px">) is made by <a href="https://www.flaticon.com/authors/flat-icons" title="Flat Icons">Flat Icons</a> from <a href="https://www.flaticon.com/" title="Flaticon"> www.flaticon.com</a></small>
-          </div>
-        </footer>
     </body>
 </html>

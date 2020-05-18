@@ -17,12 +17,15 @@ sentry_sdk.init(
 
 BASE_URL = "127.0.0.1:5000"
 
-conn = sqlite3.connect('db.sqlite3', check_same_thread=False)
-c = conn.cursor()
+
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "haah"
 app.config['UPLOAD_FOLDER'] = "files"
+app.config["DATABASE"] = "db.sqlite3"
+
+conn = sqlite3.connect(app.config["DATABASE"], check_same_thread=False)
+c = conn.cursor()
 
 @app.errorhandler(HTTPException)
 def handle_exception(e):
@@ -197,7 +200,6 @@ def district_admin_dashboard_school(code):
 
             for i in range(2, sheet.max_row+1):
                 name = sheet.cell(row=i, column=1).value
-                print(colored(name, "red"))
                 address = sheet.cell(row=i, column=2).value
                 description = sheet.cell(row=i, column=3).value
                 code = sheet.cell(row=i, column=4).value
