@@ -162,7 +162,7 @@ def district_admin_homepage(code):
     if user_info[0][5] != "district-admin" or user_info[0][6] != district:
         abort(403)
 
-    return render_template("district-admin-dashboard.html", code=code)
+    return render_template("district-admin/dashboard.html", code=code)
 
 
 @app.route("/district-admin/<string:code>/schools", methods=["GET", "POST"])
@@ -181,7 +181,16 @@ def district_admin_dashboard_school(code):
         abort(403)
 
     if request.method == "POST":
+
+        codes = c.execute("SELECT code FROM schools WHERE district_id=:d_id", {"d_id": district}).fetchall()
+
         if request.form.get("name") and request.form.get("address") and request.form.get("description") and request.form.get("code"):
+
+            # check with code already exist
+            for code in codes:
+                if request.form.get("code") == code[0]:
+                    return render_template("error.html", title="Invalid School Code", details="School code already in use, please change school code.", url=f"/district-admin/{d_code}/schools")
+
             # handle when the user submit a form manually
             c.execute("INSERT INTO schools (district_id, name, address, description, code) VALUES (:district_id, :name, :address, :description, :code)", {"district_id": int(district), "name": request.form.get("name"), "address": request.form.get("address"), "description": request.form.get("description"), "code": request.form.get("code")})
             conn.commit()
@@ -212,7 +221,48 @@ def district_admin_dashboard_school(code):
 
     else:
         schools = c.execute("SELECT * FROM schools WHERE district_id=:district_id", {"district_id": district}).fetchall()
-        return render_template("district-admin-school.html", schools=schools, code=code)
+        return render_template("district-admin/school.html", schools=schools, code=code)
+
+
+@app.route("/district-admin/<string:d_code>/edit/<string:s_code>")
+def edit_school(d_code, s_code):
+
+    user_info = c.execute("SELECT * FROM users WHERE user_id=:user_id", {"user_id": session.get("user_id")}).fetchall()
+    try:
+        district = c.execute("SELECT * FROM districts WHERE code=:code", {"code": d_code}).fetchall()[0][0]
+    except IndexError:
+        abort(403)
+
+    school_info = c.execute("SELECT * FROM schools WHERE code=:code AND district_id=:d_id", {"code": s_code, "d_id": district}).fetchall()
+
+    try:
+        return render_template("district-admin/edit-school.html", school=school_info[0])
+    except IndexError:
+        return render_template("error.html", title="School Code not found", details="School codes not found. Please double check your school code.", url=f"/district-admin/{d_code}/schools")
+
+
+@app.route("/district-admin/<string:d_code>/delete/<string:s_code>", methods=["GET", "POST"])
+def delete_school(d_code, s_code):
+
+    user_info = c.execute("SELECT * FROM users WHERE user_id=:user_id", {"user_id": session.get("user_id")}).fetchall()
+    try:
+        district = c.execute("SELECT * FROM districts WHERE code=:code", {"code": d_code}).fetchall()[0][0]
+    except IndexError:
+        abort(403)
+
+    if request.method == "POST":
+        c.execute("DELETE FROM schools WHERE code=:code and district_id=:d_code", {"code": s_code, "d_code": district})
+        conn.commit()
+        return redirect(f"/district-admin/{d_code}/schools")
+
+    else:
+        school_info = c.execute("SELECT * FROM schools WHERE code=:code AND district_id=:d_id", {"code": s_code, "d_id": district}).fetchall()
+
+        try:
+            return render_template("district-admin/confirm-delete-school.html", school=school_info[0], d_code=d_code, s_code=s_code)
+        except IndexError:
+            return render_template("error.html", title="School Code not found", details="School codes not found. Please double check your school code.", url=f"/district-admin/{d_code}/schools")
+
 
 @app.route("/logout")
 def logout():

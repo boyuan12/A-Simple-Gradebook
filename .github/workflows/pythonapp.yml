@@ -28,3 +28,5 @@ jobs:
     - name: Test with unittest
       run: |
         python test.py
+    - name: Python Style Checker
+      uses: andymckay/pycodestyle-action@0.1.3
