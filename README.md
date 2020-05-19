@@ -1,1 +1,3 @@
 # A Simple Gradebook
+
+## Usage
