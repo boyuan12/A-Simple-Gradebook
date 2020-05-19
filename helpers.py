@@ -40,4 +40,5 @@ def login_required(f):
         if session.get("user_id") is None:
             return redirect("/login?next=" + request.path)
         return f(*args, **kwargs)
+
     return decorated_function
