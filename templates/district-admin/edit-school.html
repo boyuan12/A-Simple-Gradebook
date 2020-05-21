@@ -6,7 +6,7 @@
 
 {% block main %}
     <h1>Edit School Info</h1>
-    <form action="/district-admin/{{ code }}/schools" method="POST">
+    <form action="/district-admin/{{ session['district_code'] }}/edit/school/{{ school[5] }}" method="POST">
     <div class="form-group">
         <label for="exampleInputEmail1">School Name</label>
         <input type="text" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" name="name" value="{{ school[2] }}" required>

@@ -9,7 +9,7 @@
         <h4 class="alert-heading">Are you sure you want to delete {{ school[2] }}?</h4>
         <p>If so, click on "DELETE" button. You can't undo it. Otherwise click cancel.</p>
         <hr>
-        <form action="/district-admin/{{ d_code }}/delete/{{ s_code }}" method="post">
+        <form action="/district-admin/{{ d_code }}/delete/school/{{ s_code }}" method="post">
             <button type="submit" style="background-color: #f44336;">DELETE</button>
         </form>
         <button type="button" onclick="window.location.replace('/district-admin/{{ d_code }}')">Cancel</button>

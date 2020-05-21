@@ -6,13 +6,16 @@ from termcolor import colored
 from werkzeug.exceptions import HTTPException
 from openpyxl import load_workbook
 import os
-"""import sentry_sdk
+
+"""
+import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 sentry_sdk.init(
     dsn="https://6b4e24f141bd48a582f5b24b96095bbf@o393097.ingest.sentry.io/5241674",
     integrations=[FlaskIntegration()]
-)"""
+)
+"""
 
 BASE_URL = "127.0.0.1:5000"
 
@@ -218,6 +221,8 @@ def login():
                 flash("Please check your email for verification",
                       category="warning")
             session["user_id"] = results[0][0]
+            session["district_code"] = c.execute("SELECT code FROM districts WHERE district_id=:id", {"id": results[0][6]}).fetchall()[0][0]
+            session["district_name"] = c.execute("SELECT name FROM districts WHERE district_id=:id", {"id": results[0][6]}).fetchall()[0][0]
 
             if request.args.get("next"):
                 return redirect(f"/{request.args.get('next')}")
@@ -348,7 +353,7 @@ def district_admin_dashboard_school(code):
                                code=code)
 
 
-@app.route("/district-admin/<string:d_code>/edit/<string:s_code>")
+@app.route("/district-admin/<string:d_code>/edit/school/<string:s_code>", methods=["GET", "POST"])
 def edit_school(d_code, s_code):
 
     user_info = c.execute("SELECT * FROM users WHERE user_id=:user_id", {
@@ -361,25 +366,36 @@ def edit_school(d_code, s_code):
     except IndexError:
         abort(403)
 
-    school_info = c.execute(
-        "SELECT * FROM schools WHERE code=:code AND district_id=:d_id", {
-            "code": s_code,
-            "d_id": district
-        }).fetchall()
+    if request.method == "POST":
+        c.execute("UPDATE schools SET name=:name, address=:address, description=:description", {
+            "name": request.form.get("name"),
+            "address": request.form.get("address"),
+            "description": request.form.get("description")
+        })
+        conn.commit()
 
-    try:
-        return render_template("district-admin/edit-school.html",
-                               school=school_info[0])
-    except IndexError:
-        return render_template(
-            "error.html",
-            title="School Code not found",
-            details=
-            "School codes not found. Please double check your school code.",
-            url=f"/district-admin/{d_code}/schools")
+        return redirect(f"/district-admin/{d_code}/schools")
+    else:
+
+        school_info = c.execute(
+            "SELECT * FROM schools WHERE code=:code AND district_id=:d_id", {
+                "code": s_code,
+                "d_id": district
+            }).fetchall()
+
+        try:
+            return render_template("district-admin/edit-school.html",
+                                school=school_info[0])
+        except IndexError:
+            return render_template(
+                "error.html",
+                title="School Code not found",
+                details=
+                "School codes not found. Please double check your school code.",
+                url=f"/district-admin/{d_code}/schools")
 
 
-@app.route("/district-admin/<string:d_code>/delete/<string:s_code>",
+@app.route("/district-admin/<string:d_code>/delete/school/<string:s_code>",
            methods=["GET", "POST"])
 def delete_school(d_code, s_code):
 
@@ -394,11 +410,22 @@ def delete_school(d_code, s_code):
         abort(403)
 
     if request.method == "POST":
+
+        school_id = c.execute("SELECT school_id FROM schools WHERE code=:code", {"code": s_code}).fetchall()[0][0]
+
         c.execute(
             "DELETE FROM schools WHERE code=:code and district_id=:d_code", {
                 "code": s_code,
                 "d_code": district
             })
+
+
+        c.execute(
+            "DELETE FROM users WHERE school_id=:code and district_id=:d_code", {
+                "code": school_id,
+                "d_code": district
+            })
+
         conn.commit()
         return redirect(f"/district-admin/{d_code}/schools")
 
@@ -422,6 +449,114 @@ def delete_school(d_code, s_code):
                 "School codes not found. Please double check your school code.",
                 url=f"/district-admin/{d_code}/schools")
 
+
+@app.route("/district-admin/<string:d_code>/teachers", methods=["GET", "POST"])
+def admin_teachers_dashboard(d_code):
+
+    user_info = c.execute("SELECT * FROM users WHERE user_id=:user_id", {
+        "user_id": session.get("user_id")
+    }).fetchall()
+    try:
+        district = c.execute("SELECT * FROM districts WHERE code=:code", {
+            "code": d_code
+        }).fetchall()[0][0]
+    except IndexError:
+        abort(403)
+
+    d_id = c.execute("SELECT district_id FROM districts WHERE code=:d_code", {"d_code": d_code}).fetchall()[0][0]
+
+    if request.method == "POST":
+
+        if request.form.get("name") and request.form.get("address") and request.form.get("role") and request.form.get("email") and request.form.get("s_code") and request.form.get("t_code"):
+
+            # get district id (NO ERROR SHOULD RAISE)
+            # get school id (ERROR MAY RAISE)
+
+            try:
+                s_id = c.execute("SELECT school_id FROM schools WHERE code=:code", {"code": request.form.get("s_code")}).fetchall()[0][0]
+            except IndexError:
+                return render_template("error.html", title="No School Found", detail="System didn't found the school code that you substitute in. Please double check.", url=f"/district-admin/{d_code}")
+
+            pwd = random_string(10)
+            ver = random_string(70)
+
+            c.execute("INSERT INTO users (school_id, name, username, password, role, district_id, email, verification, address, role_description, code) VALUES (:school_id, :name, :username, :password, :role, :district_id, :email, :verification, :address, :role_description, :code)", {"school_id": s_id, "name": request.form.get("name"), "username": request.form.get("email"), "password": generate_password_hash(pwd), "role": "teacher", "district_id": d_id, "email": request.form.get("email"), "verification": ver, "address": request.form.get("address"), "role_description": request.form.get("role"), "code": request.form.get("t_code")})
+
+            conn.commit()
+
+            send_email(request.form.get("email"), f"Invite for joining {d_code} as a {request.form.get('role')}", f"If you do want to join, please go ahead and click this link: https://{BASE_URL}/verify/{ver}. Your username is {request.form.get('email')}, and your password is {pwd}.")
+
+            return redirect(f"/district-admin/{d_code}/teachers")
+
+        if request.files["file"]:
+
+            filename = upload_file(app.config["UPLOAD_FOLDER"])
+            wb = load_workbook(
+                os.path.join(app.config["UPLOAD_FOLDER"], filename))
+            sheet = wb.active
+
+            if sheet.max_column != 6:
+                return render_template("error.html", title="Is Your Excel file correct?", detail="Your excel file is not in correct format. Did you have 7 column and are using the template layout that is given?")
+
+            for i in range(2, sheet.max_row + 1):
+                name = sheet.cell(row=i, column=1).value
+                address = sheet.cell(row=i, column=2).value
+                role = sheet.cell(row=i, column=3).value
+                email = sheet.cell(row=i, column=4).value
+                s_code = sheet.cell(row=i, column=5).value
+                t_code = sheet.cell(row=i, column=6).value
+
+                # check whether the teacher code already exist
+                t_codes = c.execute("SELECT * FROM users WHERE district_id=:d_id AND code=:code", {"d_id": d_id, "code": t_code}).fetchall()
+
+                if len(t_codes) != 0:
+                    return render_template("error.html", title="Invalid Teacher Code", details="Teacher code is either invalid or already exist. Please change it. Thanks.")
+
+                try:
+                    s_id = c.execute("SELECT school_id FROM schools WHERE code=:code AND district_id=:d_id", {"code": s_code, "d_id": district}).fetchall()[0][0]
+                except IndexError:
+                    return render_template("error.html", title="No School Found", details="System didn't found the school code that you substitute in. Please double check.", url=f"/district-admin/{d_code}")
+
+                pwd = random_string(10)
+                ver = random_string(70)
+
+                c.execute("INSERT INTO users (school_id, name, username, password, role, district_id, email, verification, address, role_description, code) VALUES (:school_id, :name, :username, :password, :role, :district_id, :email, :verification, :address, :role_description, :code)", {"school_id": s_id, "name": name, "username": email, "password": generate_password_hash(pwd), "role": "teacher", "district_id": d_id, "email": email, "address": address, "verification": ver, "role_description": role, "code": t_code})
+
+                conn.commit()
+
+                send_email(email, f"Invite for joining {d_code} as a {role}", f"If you do want to join, please go ahead and click this link: https://{BASE_URL}/verify/{ver}. Your username is {email}, and your password is {pwd}.")
+
+            os.remove(os.path.join(app.config["UPLOAD_FOLDER"], filename))
+
+            return redirect(f"/district-admin/{d_code}")
+
+    else:
+        results = []
+        teachers = c.execute("SELECT * FROM users WHERE role='teacher' AND district_id=:d_id", {"d_id": district}).fetchall()
+
+        for teacher in teachers:
+            name = teacher[2]
+            address = teacher[9]
+            role = teacher[10]
+            email = teacher[3]
+            s_id = teacher[1]
+            s_code = c.execute("SELECT code FROM schools WHERE school_id=:s_id", {"s_id": s_id}).fetchall()[0][0]
+            t_code = teacher[11]
+            result = [name, address, role, email, s_code, t_code]
+            results.append(result)
+
+        return render_template("district-admin/teachers.html", teachers=results)
+
+
+@app.route("/district-admin/<string:d_code>/edit/teacher/<string:t_code>", methods=["GET", "POST"])
+def edit_teacher(d_code, t_code):
+    pass
+
+
+@app.route("/district-admin/<string:d_code>/delete/school/<string:s_code>",
+           methods=["GET", "POST"])
+def delete_teacher(d_code, s_code):
+    pass
 
 @app.route("/logout")
 def logout():

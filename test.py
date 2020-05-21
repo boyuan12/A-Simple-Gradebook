@@ -54,6 +54,13 @@ class BasicTestCase(unittest.TestCase):
         rv = self.login("fakeemail@example.com", "fakepassword")
         assert b"Wrong credentials, please register before use the service" in rv.data
 
+        # test login WITH correct credentials
+        rv = self.login("mogidek129@reqaxv.com", "mogidek129@reqaxv.com")
+        assert b"wonderful" in rv.data
+
+
+
+
 
 if __name__ == '__main__':
     unittest.main()
