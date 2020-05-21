@@ -59,8 +59,5 @@ class BasicTestCase(unittest.TestCase):
         assert b"wonderful" in rv.data
 
 
-
-
-
 if __name__ == '__main__':
     unittest.main()
