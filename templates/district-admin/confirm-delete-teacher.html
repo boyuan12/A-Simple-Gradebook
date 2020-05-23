@@ -6,10 +6,10 @@
 
 {% block main %}
     <div class="alert alert-warning" role="alert">
-        <h4 class="alert-heading">Are you sure you want to delete {{ school[2] }}?</h4>
+        <h4 class="alert-heading">Are you sure you want to delete {{ name }}?</h4>
         <p>If so, click on "DELETE" button. You can't undo it. Note that ALL Related users will also get deleted.</p>
         <hr>
-        <form action="/district-admin/{{ d_code }}/delete/school/{{ s_code }}" method="post">
+        <form action="/district-admin/{{ d_code }}/delete/teacher/{{ t_code }}" method="post">
             <button type="submit" style="background-color: #f44336;">DELETE</button>
         </form>
         <button type="button" onclick="window.location.replace('/district-admin/{{ d_code }}')">Cancel</button>

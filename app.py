@@ -53,7 +53,7 @@ def create_school():
         # check for weather user provide all required information
         if not request.form.get("email") or not request.form.get(
                 "password"
-        ) or not request.form.get("district-name") or not request.form.get(
+        ) or not request.form.get("district_name") or not request.form.get(
                 "code") or not request.form.get(
                     "address") or not request.form.get(
                         "city") or not request.form.get(
@@ -113,7 +113,7 @@ def create_school():
         c.execute(
             "INSERT INTO districts (name, motto, logo, address, code) VALUES (:name, :motto, :logo, :address, :code)",
             {
-                "name": request.form.get("district-name"),
+                "name": request.form.get("district_name"),
                 "motto": request.form.get("motto"),
                 "logo": filename,
                 "address": addr,
@@ -642,13 +642,128 @@ def admin_teachers_dashboard(d_code):
 @app.route("/district-admin/<string:d_code>/edit/teacher/<string:t_code>",
            methods=["GET", "POST"])
 def edit_teacher(d_code, t_code):
-    pass
+
+    user_info = c.execute("SELECT * FROM users WHERE user_id=:user_id", {
+        "user_id": session.get("user_id")
+    }).fetchall()
+    try:
+        district = c.execute("SELECT * FROM districts WHERE code=:code", {
+            "code": d_code
+        }).fetchall()[0][0]
+    except IndexError:
+        abort(403)
+
+    d_id = c.execute("SELECT district_id FROM districts WHERE code=:code", {
+        "code": d_code
+    }).fetchall()[0][0]
+
+    # check whether the teacher code is valid
+    try:
+        t_id = c.execute(
+            "SELECT * FROM users WHERE role='teacher' AND district_id=:d_id AND code=:t_code",
+            {
+                "d_id": d_id,
+                "t_code": t_code
+            }).fetchall()[0][0]
+    except IndexError:
+        return render_template(
+            "error.html",
+            title="No Teacher Code Found",
+            details="No teacher code, please double check. Thanks")
+
+    if request.method == "POST":
+        try:
+            s_id = c.execute("SELECT school_id FROM schools WHERE code=:code",
+                             {
+                                 "code": request.form.get("s_code")
+                             }).fetchall()[0][0]
+        except IndexError:
+            return render_template(
+                "error.html",
+                title="No School Found",
+                detail=
+                "System didn't found the school code that you substitute in. Please double check.",
+                url=f"/district-admin/{d_code}")
+
+        c.execute(
+            "UPDATE users SET name=:name, address=:address, role_description=:role_description, email=:email, school_id=:school_id WHERE role='teacher' AND district_id=:district_id AND code=:code",
+            {
+                "name": request.form.get("name"),
+                "address": request.form.get("address"),
+                "role_description": request.form.get("role"),
+                "email": request.form.get("email"),
+                "school_id": s_id,
+                "district_id": d_id,
+                "code": t_code
+            })
+
+        conn.commit()
+
+        return redirect(f"/district-admin/{d_code}/teachers")
+
+    else:
+        teacher = c.execute(
+            "SELECT * FROM users WHERE role='teacher' AND district_id=:d_id AND code=:t_code",
+            {
+                "d_id": d_id,
+                "t_code": t_code
+            }).fetchall()[0]
+        print(teacher)
+        name = teacher[2]
+        address = teacher[9]
+        role = teacher[10]
+        email = teacher[3]
+        s_id = teacher[1]
+        s_code = c.execute("SELECT code FROM schools WHERE school_id=:s_id", {
+            "s_id": s_id
+        }).fetchall()[0][0]
+        t_code = teacher[11]
+        result = [name, address, role, email, s_code, t_code]
+
+        return render_template("district-admin/edit-teacher.html",
+                               teacher=result)
 
 
-@app.route("/district-admin/<string:d_code>/delete/school/<string:s_code>",
+@app.route("/district-admin/<string:d_code>/delete/teacher/<string:t_code>",
            methods=["GET", "POST"])
-def delete_teacher(d_code, s_code):
-    pass
+def delete_teacher(d_code, t_code):
+
+    user_info = c.execute("SELECT * FROM users WHERE user_id=:user_id", {
+        "user_id": session.get("user_id")
+    }).fetchall()
+    try:
+        district = c.execute("SELECT * FROM districts WHERE code=:code", {
+            "code": d_code
+        }).fetchall()[0][0]
+    except IndexError:
+        abort(403)
+
+    if request.method == "POST":
+        c.execute(
+            "DELETE FROM users WHERE district_id = :d_id AND code=:code ", {
+                "d_id": district,
+                "code": t_code
+            })
+        conn.commit()
+        return redirect(f"/district-admin/{d_code}/teachers")
+
+    else:
+        try:
+            name = c.execute(
+                "SELECT name FROM users WHERE role='teacher' AND code=:t_code AND district_id=:d_id",
+                {
+                    "t_code": t_code,
+                    "d_id": district
+                }).fetchall()[0][0]
+        except:
+            return render_template(
+                "error.html",
+                title="No Teacher Found",
+                details="No teacher code found, please double check. Thanks.")
+        return render_template("district-admin/confirm-delete-teacher.html",
+                               name=name,
+                               d_code=d_code,
+                               t_code=t_code)
 
 
 @app.route("/logout")

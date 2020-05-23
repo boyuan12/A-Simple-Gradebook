@@ -4,6 +4,9 @@ from app import app
 import os
 import requests
 
+from time import sleep
+import io
+
 
 class BasicTestCase(unittest.TestCase):
     def setUp(self):
@@ -26,14 +29,31 @@ class BasicTestCase(unittest.TestCase):
         tester = os.path.exists("temp.sqlite3")
         self.assertTrue(tester)
 
-    def create_district(
-        self,
-        email,
-        name,
-        password,
-        confirmation,
-    ):
-        pass
+    def create_district(self, email, name, password, confirmation,
+                        district_name, code, motto, address, city, state, zip):
+        return self.app.post("/create-district",
+                             data=dict(email=email,
+                                       password=password,
+                                       confirmation=confirmation,
+                                       district_name=district_name,
+                                       code=code,
+                                       motto=motto,
+                                       address=address,
+                                       city=city,
+                                       state=state,
+                                       zip=zip,
+                                       file=(io.BytesIO(b"abcdef"),
+                                             'test.jpg'),
+                                       follow_redirects=False,
+                                       content_type='multipart/form-data'))
+
+    def test_create_district(self):
+        rv = self.create_district("5v6g6.test@inbox.testmail.app", "ASGTest",
+                                  "ASGTest", "ASGTest", "ASGTest", "ASGT",
+                                  "ASGTest", "1234 Main St.", "Somecity",
+                                  "Hawaii", "00000")
+        print(rv.data)
+        assert b"ASGTest" in rv.data
 
     def login(self, username, password):
         return self.app.post('/login',
