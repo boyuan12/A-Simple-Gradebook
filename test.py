@@ -47,14 +47,6 @@ class BasicTestCase(unittest.TestCase):
                                        follow_redirects=False,
                                        content_type='multipart/form-data'))
 
-    def test_create_district(self):
-        rv = self.create_district("5v6g6.test@inbox.testmail.app", "ASGTest",
-                                  "ASGTest", "ASGTest", "ASGTest", "ASGT",
-                                  "ASGTest", "1234 Main St.", "Somecity",
-                                  "Hawaii", "00000")
-        print(rv.data)
-        assert b"ASGTest" in rv.data
-
     def login(self, username, password):
         return self.app.post('/login',
                              data=dict(username=username, password=password),
