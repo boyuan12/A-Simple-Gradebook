@@ -11,8 +11,8 @@ import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 sentry_sdk.init(
-    dsn="https://6b4e24f141bd48a582f5b24b96095bbf@o393097.ingest.sentry.io/5241674",
-    integrations=[FlaskIntegration()]
+	dsn="https://6b4e24f141bd48a582f5b24b96095bbf@o393097.ingest.sentry.io/5241674",
+	integrations=[FlaskIntegration()]
 )
 """
 
@@ -483,7 +483,8 @@ def admin_teachers_dashboard(d_code):
         if request.form.get("name") and request.form.get(
                 "address") and request.form.get("role") and request.form.get(
                     "email") and request.form.get(
-                        "s_code") and request.form.get("t_code"):
+                        "s_code") and request.form.get(
+                            "t_code") and request.form.get("subjects"):
 
             # get district id (NO ERROR SHOULD RAISE)
             # get school id (ERROR MAY RAISE)
@@ -504,6 +505,19 @@ def admin_teachers_dashboard(d_code):
             pwd = random_string(10)
             ver = random_string(70)
 
+            subjects = request.form.get("subjects").split(", ")
+
+            results = c.execute(
+                "SELECT email FROM users WHERE email=:email AND district_id=:d_id AND role='teacher'",
+                {
+                    "email": request.form.get("email"),
+                    "d_id": d_id
+                }).fetchall()
+
+            if (request.form.get("email"), ) in results:
+                flash("Error, email already exist")
+                return redirect(f"/district-admin/{d_code}/teachers")
+
             c.execute(
                 "INSERT INTO users (school_id, name, username, password, role, district_id, email, verification, address, role_description, code) VALUES (:school_id, :name, :username, :password, :role, :district_id, :email, :verification, :address, :role_description, :code)",
                 {
@@ -521,6 +535,40 @@ def admin_teachers_dashboard(d_code):
                 })
 
             conn.commit()
+
+            t_id = c.execute(
+                "SELECT user_id FROM users WHERE email=:email AND role='teacher' AND district_id=:d_id",
+                {
+                    "email": request.form.get("email"),
+                    "d_id": d_id
+                }).fetchall()[0][0]
+
+            for subject in subjects:
+                print("hi")
+                sub = subject.split("-")
+
+                try:
+                    sub_id = c.execute(
+                        "SELECT course_id FROM courses WHERE district_id=:d_id AND code=:code",
+                        {
+                            "d_id": d_id,
+                            "code": sub[1]
+                        }).fetchall()[0][0]
+                except IndexError:
+                    return render_template(
+                        "error.html",
+                        title="Course Not Found",
+                        details="Please check your course code")
+
+                c.execute(
+                    "INSERT INTO teacher_subject (teacher_id, period, subject_id) VALUES (:t_id, :p, :s)",
+                    {
+                        "t_id": t_id,
+                        "p": sub[0],
+                        "s": sub_id
+                    })
+
+                conn.commit()
 
             send_email(
                 request.form.get("email"),
@@ -764,6 +812,248 @@ def delete_teacher(d_code, t_code):
                                name=name,
                                d_code=d_code,
                                t_code=t_code)
+
+
+@app.route("/district-admin/<string:d_code>/students", methods=["GET", "POST"])
+def students(d_code):
+
+    user_info = c.execute("SELECT * FROM users WHERE user_id=:user_id", {
+        "user_id": session.get("user_id")
+    }).fetchall()
+    try:
+        district = c.execute("SELECT * FROM districts WHERE code=:code", {
+            "code": d_code
+        }).fetchall()[0][0]
+    except IndexError:
+        abort(403)
+
+    if request.method == "POST":
+        if request.form.get("name") and request.form.get(
+                "address") and request.form.get("grade") and request.form.get(
+                    "email") and request.form.get(
+                        "s_code") and request.form.get("t_code"):
+            pass
+
+    else:
+        return render_template("district-admin/students.html")
+
+
+@app.route("/district-admin/<string:d_code>/details/teacher/<string:t_code>")
+def district_admin_teacher_detail(d_code, t_code):
+
+    user_info = c.execute("SELECT * FROM users WHERE user_id=:user_id", {
+        "user_id": session.get("user_id")
+    }).fetchall()
+    try:
+        district = c.execute("SELECT * FROM districts WHERE code=:code", {
+            "code": d_code
+        }).fetchall()[0][0]
+    except IndexError:
+        abort(403)
+
+    d_id = c.execute("SELECT district_id FROM districts WHERE code=:d_code", {
+        "d_code": d_code
+    }).fetchall()[0][0]
+
+    info = c.execute(
+        "SELECT * FROM users WHERE code=:t_code AND district_id=:d_id", {
+            "t_code": t_code,
+            "d_id": d_id
+        }).fetchall()
+
+    s_name = c.execute(
+        "SELECT name FROM schools WHERE district_id=:d_id AND school_id=:s_id",
+        {
+            "d_id": d_id,
+            "s_id": info[0][1]
+        }).fetchall()
+    print(info)
+
+    ts = c.execute(
+        "SELECT * FROM teacher_subject JOIN courses ON courses.course_id=teacher_subject.subject_id WHERE teacher_id=:t_id ORDER BY teacher_subject.period ASC",
+        {
+            "t_id": info[0][0]
+        }).fetchall()
+
+    print(ts)
+    # return str(info + ts)
+    return render_template("district-admin/teacher-detail.html",
+                           info=info,
+                           ts=ts,
+                           s_name=s_name)
+
+
+@app.route("/district-admin/<string:d_code>/courses", methods=["GET", "POST"])
+@login_required
+def district_admin_courses(d_code):
+
+    user_info = c.execute("SELECT * FROM users WHERE user_id=:user_id", {
+        "user_id": session.get("user_id")
+    }).fetchall()
+    try:
+        district = c.execute("SELECT * FROM districts WHERE code=:code", {
+            "code": d_code
+        }).fetchall()[0][0]
+    except IndexError:
+        abort(403)
+
+    d_id = c.execute("SELECT district_id FROM districts WHERE code=:code", {
+        "code": d_code
+    }).fetchall()[0][0]
+
+    if request.method == "POST":
+        courses = c.execute("SELECT code FROM courses WHERE district_id=:d_id",
+                            {
+                                "d_id": d_id
+                            }).fetchall()
+        if (request.form.get("c_code"), ) in courses:
+            return render_template("error.html",
+                                   title="Course code already exist",
+                                   details="Please change your course code")
+
+        # if it does pass
+
+        s_code = c.execute(
+            "SELECT * FROM schools WHERE code=:code AND district_id=:d_id", {
+                "code": request.form.get("s_code"),
+                "d_id": d_id
+            }).fetchall()
+
+        if len(s_code) != 1:
+            return render_template("error.html",
+                                   title="School code not found",
+                                   details="Please check your school code")
+
+        c.execute(
+            "INSERT INTO courses (title, grade, district_id, school_id, description, code) VALUES (:title, :grade, :district_id, :school_id, :description, :code)",
+            {
+                "title": request.form.get("title"),
+                "grade": request.form.get("grade"),
+                "district_id": d_id,
+                "school_id": s_code[0][0],
+                "description": request.form.get("description"),
+                "code": request.form.get("c_code")
+            })
+        conn.commit()
+
+        return redirect(f"/district-admin/{d_code}/courses")
+
+    else:
+        courses = c.execute("SELECT * FROM courses WHERE district_id=:d_id", {
+            "d_id": d_id
+        }).fetchall()
+        c_list = []
+        for course in courses:
+            s_code = c.execute(
+                "SELECT code FROM schools WHERE school_id=:s_id", {
+                    "s_id": course[4]
+                }).fetchall()[0][0]
+            c_list.append([course[1], course[5], course[2], s_code, course[6]])
+        # return str(courses)
+        return render_template("district-admin/courses.html", courses=c_list)
+
+
+@app.route("/district-admin/<string:d_code>/edit/course")
+def edit_course():
+    pass
+
+
+@app.route("/email", methods=["GET", "POST"])
+@login_required
+def email():
+
+    d_id = c.execute("SELECT district_id FROM districts WHERE code=:code", {
+        "code": session.get("district_code")
+    }).fetchall()[0][0]
+
+    if request.method == "POST":
+
+        if not request.form.get("receiver") or not request.form.get(
+                "subject") or not request.form.get("content"):
+            return render_template(
+                "error.html",
+                title="Please fill out all required fields",
+                details=
+                "Please make sure you fill out required fields when sending a email"
+            )
+
+        for i in request.form.get("receiver").split(", "):
+
+            z = i.split(" - ")
+
+            try:
+                user_id = c.execute(
+                    "SELECT user_id FROM users WHERE code=:code AND district_id=:d_id",
+                    {
+                        "code": z[1],
+                        "d_id": d_id
+                    }).fetchall()[0][0]
+            except IndexError:
+                if z[0] != "":
+                    return render_template('error.html',
+                                           title="person didn't find",
+                                           details=str(z))
+                else:
+                    break
+
+            c.execute(
+                "INSERT INTO emails (sender_id, receiver, subject, contents, district_id) VALUES (:sender_id, :receiver, :subject, :content, :d_id)",
+                {
+                    "sender_id": session.get("user_id"),
+                    "receiver": user_id,
+                    "subject": request.form.get("subject"),
+                    "content": request.form.get("content"),
+                    "d_id": d_id
+                })
+
+            conn.commit()
+
+            print(1)
+
+        return redirect("/email")
+
+    else:
+
+        users = c.execute(
+            "SELECT name, code FROM users WHERE district_id=:d_id", {
+                "d_id":
+                c.execute("SELECT district_id FROM districts WHERE code=:code",
+                          {
+                              "code": session.get("district_code")
+                          }).fetchall()[0][0]
+            }).fetchall()
+        users_str = ""
+
+        for i in range(len(users)):
+            if i == len(users) - 1:
+                users_str += f"{users[i][0]} - {users[i][1]}"
+            else:
+                users_str += f"{users[i][0]} - {users[i][1]}, "
+
+        emails = c.execute("SELECT * FROM emails WHERE receiver=:r_id", {
+            "r_id": session.get("user_id")
+        }).fetchall()
+
+        if len(emails) == 0:
+            return render_template("district-admin/email.html",
+                                   users_str=users_str,
+                                   emails=emails)
+
+        emails_list = []
+
+        for email in emails:
+
+            subject = email[5]
+            content = email[6]
+            sender_name = c.execute(
+                "SELECT name FROM users WHERE user_id=:u_id", {
+                    "u_id": email[1]
+                }).fetchall()[0][0]
+            emails_list.append([sender_name, subject, content])
+
+        return render_template("district-admin/email.html",
+                               users_str=users_str,
+                               emails=emails_list)
 
 
 @app.route("/logout")

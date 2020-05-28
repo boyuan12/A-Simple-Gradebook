@@ -35,6 +35,17 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16x16.png">
     <link rel="manifest" href="/static/favicon/site.webmanifest">
+
+    <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4/dist/algoliasearch.umd.js"></script>
+
+    <script>
+      // for the default version
+        // For the default version
+        // For the default version
+        const client = algoliasearch('PLPD00S75D', '0b66e96e8af98edb95a4b23ea50538fb');
+        const index = client.initIndex('your_index_name');
+        console.log(index.search("data"));
+    </script>
   </head>
 
   <body>
@@ -81,9 +92,15 @@
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/district-admin/{{ session['district_code'] }}/students" id="students">
-                <i class="fas fa-graduation-cap"></i>
-              Students
+            <a class="nav-link" href="/district-admin/{{ session['district_code'] }}/courses" id="courses">
+              <i class="fas fa-chalkboard"></i>
+              Courses
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/email" id="email">
+              <i class="fas fa-inbox"></i>
+              Email
             </a>
           </li>
         </ul>
@@ -127,19 +144,21 @@
     </main>
   </div>
 </div>
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
-<script>window.jQuery || document.write('<script src="../assets/js/vendor/jquery.slim.min.js"><\/script>')</script><script src="../assets/dist/js/bootstrap.bundle.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.9.0/feather.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js"></script>
+
 <script>
     if (window.location.pathname.includes("schools")) {
       document.getElementById("schools").className += " active";
-    } else if (window.location.pathname.includes("teachers")) {
+    } else if (window.location.pathname.includes("teacher")) {
       document.getElementById("teachers").className += " active";
     } else if (window.location.pathname.includes("students")) {
       document.getElementById("students").className += " active";
+    } else if (window.location.pathname.includes("courses")) {
+      document.getElementById("courses").className += " active";
+    } else if (window.location.pathname.includes("email")) {
+      document.getElementById("email").className += " active";
     } else {
       document.getElementById("dashboard").className += " active";
     }
 </script>
+
 </html>

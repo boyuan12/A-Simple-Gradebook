@@ -1,0 +1,52 @@
+{% extends "district-admin/dashboard-layout.html" %}
+
+{% block title %}
+    Email
+{% endblock %}
+
+{% block main %}
+    <h1>Send a Email Within your district</h1>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.js"></script>
+    <link rel="stylesheet" href="../../static/email-autocomplete-css.css">
+    <form action="/email" method="POST">
+      <div class="form-group">
+        <label for="exampleInputEmail1">Send to</label>
+        <input data-list="{{ users_str }}" style="width: 1000px;" data-multiple name="receiver" />
+      </div>
+      <div class="form-group">
+        <label for="exampleInputEmail1">Subject</label>
+        <input type="text" style="width: 1000px;" name="subject" />
+      </div>
+      <div class="form-group">
+        <label for="exampleFormControlTextarea1">Contents</label>
+        <textarea class="form-control" id="exampleFormControlTextarea1" rows="3" name="content" ></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Send</button>
+    </form>
+
+    <hr>
+    <h1>All Your emails</h1>
+
+    <script>
+      new Awesomplete('input[data-multiple]', {
+      filter: function(text, input) {
+        return Awesomplete.FILTER_CONTAINS(text, input.match(/[^,]*$/)[0]);
+      },
+
+      item: function(text, input) {
+        return Awesomplete.ITEM(text, input.match(/[^,]*$/)[0]);
+      },
+
+      replace: function(text) {
+        var before = this.input.value.match(/^.+,\s*|/)[0];
+        this.input.value = before + text + ", ";
+      }
+    });
+    </script>
+
+    {% for email in emails %}
+      <h3>{{ email[1] }}</h3>
+      <p>Send From: {{ email[0] }}</p>
+      <p>{{ email[2] }}</p>
+    {% endfor %}
+{% endblock %}
