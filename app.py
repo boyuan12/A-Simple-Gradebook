@@ -23,8 +23,19 @@ app.config["SECRET_KEY"] = "haah"
 app.config['UPLOAD_FOLDER'] = "files"
 app.config["DATABASE"] = "db.sqlite3"
 
-conn = sqlite3.connect(app.config["DATABASE"], check_same_thread=False)
-c = conn.cursor()
+
+if not os.getenv("DATABASE_URL"):
+    conn = sqlite3.connect(app.config["DATABASE"], check_same_thread=False)
+    c = conn.cursor()
+
+else:
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import scoped_session, sessionmaker
+
+    engine = create_engine(os.getenv("DATABASE_URL"))
+    db = scoped_session(sessionmaker(bind=engine))
+    c = db()
 
 
 @app.errorhandler(HTTPException)

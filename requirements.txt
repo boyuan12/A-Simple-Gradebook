@@ -4,3 +4,5 @@ Werkzeug==0.16.0
 gunicorn
 openpyxl
 requests
+psycopg2-binary
+SQLAlchemy
