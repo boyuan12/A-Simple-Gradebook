@@ -23,7 +23,6 @@ app.config["SECRET_KEY"] = "haah"
 app.config['UPLOAD_FOLDER'] = "files"
 app.config["DATABASE"] = "db.sqlite3"
 
-
 if not os.getenv("DATABASE_URL"):
     conn = sqlite3.connect(app.config["DATABASE"], check_same_thread=False)
     c = conn.cursor()
