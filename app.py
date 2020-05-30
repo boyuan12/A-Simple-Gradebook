@@ -6,6 +6,7 @@ from termcolor import colored
 from werkzeug.exceptions import HTTPException
 from openpyxl import load_workbook
 import os
+
 """
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
@@ -35,6 +36,7 @@ else:
     engine = create_engine(os.getenv("DATABASE_URL"))
     db = scoped_session(sessionmaker(bind=engine))
     c = db()
+    conn = c
 
 
 @app.errorhandler(HTTPException)
