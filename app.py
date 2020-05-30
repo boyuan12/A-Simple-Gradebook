@@ -141,7 +141,7 @@ def create_school():
 
         verification_str = random_string(50)
         c.execute(
-            "INSERT INTO users (school_id, name, username, password, role, district_id, email, verification) VALUES (0, :name, :username, :password, :role, :district_id, :email, :verification)",
+            "INSERT INTO users (school_id, name, username, password, role, district_id, email, verification, code) VALUES (0, :name, :username, :password, :role, :district_id, :email, :verification, :code)",
             {
                 "name":
                 request.form.get("name"),
