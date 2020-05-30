@@ -49,6 +49,12 @@ def handle_exception(e):
         "name": e.name,
         "description": e.description,
     })
+    if e.code == 500:
+        try:
+            c.execute("ROLLBACK")
+            c.commit()
+        except:
+            pass
     response.content_type = "application/json"
     return response
 
