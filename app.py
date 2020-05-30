@@ -16,8 +16,6 @@ sentry_sdk.init(
 )
 """
 
-BASE_URL = "127.0.0.1:5000"
-
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "haah"
 app.config['UPLOAD_FOLDER'] = "files"
@@ -26,6 +24,7 @@ app.config["DATABASE"] = "db.sqlite3"
 if not os.getenv("DATABASE_URL"):
     conn = sqlite3.connect(app.config["DATABASE"], check_same_thread=False)
     c = conn.cursor()
+    BASE_URL = "127.0.0.1:5000"
 
 else:
 
@@ -36,6 +35,7 @@ else:
     db = scoped_session(sessionmaker(bind=engine))
     c = db()
     conn = c
+    BASE_URL = "https://a-simple-gradebook.herokuapp.com"
 
 
 @app.errorhandler(HTTPException)
@@ -158,7 +158,9 @@ def create_school():
                 "email":
                 request.form.get("email"),
                 "verification":
-                verification_str
+                verification_str,
+                "code":
+                request.form.get("code") + " admin"
             })
         conn.commit()
 

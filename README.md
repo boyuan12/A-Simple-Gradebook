@@ -1,5 +1,7 @@
 # A Simple Gradebook
 ![Python application](https://github.com/boyuan12/A-Simple-Gradebook/workflows/Python%20application/badge.svg)
+[![Code style: yapf](https://img.shields.io/badge/code%20style-yapf-blue)](https://github.com/google/yapf)
+
 
 This is A Simple Gradebook (ASG), not that simple after all. This is a gradebook management features with features like (planned) emailing, attendance, assignment and grade management, blog posting and even live chatting. And more that we thought or haven't thought about. This can be great used for a whole district, individual school, individual teacher or just home-school parents can choose this website. This is a fully opensource project and is built upon Flask.
 
