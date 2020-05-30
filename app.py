@@ -1050,7 +1050,7 @@ def email():
                 users_str += f"{users[i][0]} - {users[i][1]}, "
 
         emails = c.execute("SELECT * FROM emails WHERE receiver=:r_id", {
-            "r_id": session.get("user_id")
+            "r_id": str(session.get("user_id"))
         }).fetchall()
 
         if len(emails) == 0:
