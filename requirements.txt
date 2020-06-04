@@ -7,3 +7,4 @@ psycopg2-binary
 SQLAlchemy
 gunicorn==0.16.1
 Flask-SocketIO
+gevent-websocket
