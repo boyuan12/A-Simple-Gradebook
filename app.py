@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, flash, redirect, session, json, abort
+from flask_socketio import SocketIO, emit
 import sqlite3
 from helpers import upload_file, send_email, random_string, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -20,6 +21,7 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = "haah"
 app.config['UPLOAD_FOLDER'] = "files"
 app.config["DATABASE"] = "db.sqlite3"
+socketio = SocketIO(app)
 
 if not os.getenv("DATABASE_URL"):
     conn = sqlite3.connect(app.config["DATABASE"], check_same_thread=False)
@@ -36,7 +38,6 @@ else:
     c = db()
     conn = c
     BASE_URL = "https://a-simple-gradebook.herokuapp.com"
-
 
 @app.errorhandler(HTTPException)
 def handle_exception(e):
@@ -235,9 +236,11 @@ def login():
             return redirect("/login")
 
         if check_password_hash(results[0][4], request.form.get("password")):
-            if results[0][8] != "verified":
-                flash("Please check your email for verification",
+            if results[0][8] != "verify":
+                flash("Please check your email for verification. You must verify your email address before you can log in",
                       category="warning")
+                return redirect("/")
+
             session["user_id"] = results[0][0]
             session["district_code"] = c.execute(
                 "SELECT code FROM districts WHERE district_id=:id", {
@@ -257,6 +260,8 @@ def login():
                         "id": results[0][6]
                     }).fetchall()
                 return redirect(f"/district-admin/{district_info[0][5]}")
+            elif results[0][5] == "teacher":
+                return redirect("/teacher")
 
         flash("Wrong credentials, please register before use the service",
               category="danger")
@@ -1075,7 +1080,31 @@ def email():
                                emails=emails_list)
 
 
+@app.route("/teacher")
+@login_required
+def teacher():
+    return render_template("teacher/dashboard.html")
+
+
+@app.route("/profile")
+@login_required
+def profile():
+    user = c.execute("SELECT * FROM users WHERE user_id=:u_id", {"u_id": session.get("user_id")}).fetchall()[0]
+    return render_template("district-admin/profile.html", user=user)
+
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/")
+
+@app.route("/chat")
+def chat():
+    return render_template("chat.html")
+
+@socketio.on('broadcast message')
+def messageDisplay(data):
+    emit("show message", dict(message=data["message"]))
+
+
+if __name__ == "__main__":
+    app.run("127.0.0.1", 5000, debug=True)

@@ -6,7 +6,7 @@
     <meta name="description" content="">
     <meta name="author" content="Mark Otto, Jacob Thornton, and Bootstrap contributors">
     <meta name="generator" content="Jekyll v4.0.1">
-    <title>District Admin Dashboard</title>
+    <title>Teacher Dashboard</title>
 
     <link rel="canonical" href="https://getbootstrap.com/docs/4.5/examples/dashboard/">
 
@@ -55,7 +55,6 @@
     <span class="navbar-toggler-icon"></span>
   </button>
   <input class="form-control form-control-dark w-100" type="text" placeholder="Search" aria-label="Search">
-  <a class="nav-link" href="/profile"><i class="fas fa-user-circle"></i></a>
   <ul class="navbar-nav px-3">
     <li class="nav-item text-nowrap">
       <a class="nav-link" href="/logout">Sign out</a>
@@ -69,33 +68,27 @@
       <div class="sidebar-sticky pt-3">
         <ul class="nav flex-column">
           <li class="nav-item">
-            <a class="nav-link" href="/district-admin/{{ session['district_code'] }}" id="dashboard">
+            <a class="nav-link" href="dashboard" id="dashboard">
                 <i class="fas fa-home"></i>
               Dashboard <span class="sr-only">(current)</span>
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/district-admin/{{ session['district_code'] }}/schools" id="schools">
-                <i class="fas fa-school"></i>
-               Schools
+            <a class="nav-link" href="/teacher/gradebooks" id="teachers">
+              <i class="fas fa-book"></i>
+              Gradebook
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/district-admin/{{ session['district_code'] }}/teachers" id="teachers">
-                <i class="fas fa-chalkboard-teacher"></i>
-              Teachers
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/district-admin/{{ session['district_code'] }}/students" id="students">
+            <a class="nav-link" href="/teacher/students" id="students">
                 <i class="fas fa-graduation-cap"></i>
               Students
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/district-admin/{{ session['district_code'] }}/courses" id="courses">
-              <i class="fas fa-chalkboard"></i>
-              Courses
+            <a class="nav-link" href="/teacher/blog" id="students">
+              <i class="fas fa-rss-square"></i>
+              Blog
             </a>
           </li>
           <li class="nav-item">
@@ -105,7 +98,7 @@
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/chat" id="chat">
+            <a class="nav-link" href="/chat" id="email">
               <i class="fas fa-comment"></i>
               Chat
             </a>

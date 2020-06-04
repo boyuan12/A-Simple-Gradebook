@@ -6,3 +6,4 @@ openpyxl
 requests
 psycopg2-binary
 SQLAlchemy
+Flask-SocketIO
