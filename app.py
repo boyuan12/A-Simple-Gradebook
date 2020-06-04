@@ -39,6 +39,7 @@ else:
     conn = c
     BASE_URL = "https://a-simple-gradebook.herokuapp.com"
 
+
 @app.errorhandler(HTTPException)
 def handle_exception(e):
     """Return JSON instead of HTML for HTTP errors."""
@@ -237,8 +238,9 @@ def login():
 
         if check_password_hash(results[0][4], request.form.get("password")):
             if results[0][8] != "verify":
-                flash("Please check your email for verification. You must verify your email address before you can log in",
-                      category="warning")
+                flash(
+                    "Please check your email for verification. You must verify your email address before you can log in",
+                    category="warning")
                 return redirect("/")
 
             session["user_id"] = results[0][0]
@@ -1089,22 +1091,23 @@ def teacher():
 @app.route("/profile")
 @login_required
 def profile():
-    user = c.execute("SELECT * FROM users WHERE user_id=:u_id", {"u_id": session.get("user_id")}).fetchall()[0]
+    user = c.execute("SELECT * FROM users WHERE user_id=:u_id", {
+        "u_id": session.get("user_id")
+    }).fetchall()[0]
     return render_template("district-admin/profile.html", user=user)
+
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/")
 
+
 @app.route("/chat")
 def chat():
     return render_template("chat.html")
 
+
 @socketio.on('broadcast message')
 def messageDisplay(data):
     emit("show message", dict(message=data["message"]))
-
-
-if __name__ == "__main__":
-    app.run("127.0.0.1", 5000, debug=True)
