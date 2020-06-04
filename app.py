@@ -1112,5 +1112,6 @@ def chat():
 def messageDisplay(data):
     emit("show message", dict(message=data["message"]))
 
+
 if __name__ == "__main__":
     socketio.run(app)
