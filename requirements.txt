@@ -5,10 +5,5 @@ openpyxl
 requests
 psycopg2-binary
 SQLAlchemy
-gevent>=1.0,<=1.1.0
-Flask-SocketIO==0.6.0
-gunicorn==17.5
-setuptools>=3.3,<=20.7.0
-lmdb==0.87
-h5py>=2.2.1,<=2.6.0
-pydot
+gunicorn==0.16.1
+Flask-SocketIO
