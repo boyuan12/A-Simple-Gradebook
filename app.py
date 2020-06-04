@@ -1111,3 +1111,5 @@ def chat():
 @socketio.on('broadcast message')
 def messageDisplay(data):
     emit("show message", dict(message=data["message"]))
+
+socketio.run(app)
