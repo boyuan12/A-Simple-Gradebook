@@ -22,5 +22,4 @@ WTForms==2.2.1
 termcolor
 openpyxl
 requests
-SQLAlchemy
 psycopg2-binary
