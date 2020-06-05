@@ -1110,7 +1110,8 @@ def chat():
 
 @socketio.on('broadcast message')
 def messageDisplay(data):
-    emit("show message", dict(message=data["message"]))
+    name = c.execute("SELECT name FROM users WHERE user_id=:u_id", {"u_id": session.get("user_id")}).fetchall()[0][0]
+    emit("show message", dict(message=data["message"], name=name, timestamp=data["timestamp"]), broadcast=True)
 
 
 if __name__ == "__main__":
