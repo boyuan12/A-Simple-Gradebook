@@ -859,7 +859,7 @@ def students(d_code):
                 "address") and request.form.get("grade") and request.form.get(
                     "email") and request.form.get(
                         "s_code") and request.form.get("t_code"):
-
+                            """
                             d_id = dcode_to_did(d_code)
                             subjects = request.form.get("subjects").split(", ")
                             for subject in subjects:
@@ -888,6 +888,8 @@ def students(d_code):
                                     })
 
                                 conn.commit()
+                                """
+        pass
 
     else:
         return render_template("district-admin/students.html")
