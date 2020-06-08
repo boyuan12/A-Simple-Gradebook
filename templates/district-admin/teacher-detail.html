@@ -5,13 +5,17 @@
 {% endblock %}
 
 {% block main %}
-    <h1>Teacher detail</h1>
-    <h3>Name: {{ info[0][2] }}</h3>
-    <h3>Address: {{ info[0][9] }}</h3>
-    <h3>Role: {{ info[0][5] }}</h3>
-    <h3>Email: {{ info[0][7] }}</h3>
-    <h3>School: {{ s_name[0][0] }}</h3>
-    <h3>Code: {{ info[0][11] }}</h3>
+    <form method="post" action="">
+      <h1>Teacher detail</h1>
+      <h3>Name: <input type="text" value="{{ info[0][2] }}" name="name"></h3>
+      <h3>Address: <input type="address" value="{{ info[0][9] }}"></h3>
+      <h3>Role: <input type="text" value="{{ info[0][5] }}" name="role"></h3>
+      <h3>Email: <input type="email" value="{{ info[0][7] }}" name="email"></h3>
+      <h3>School: <input type="text" value="{{ s_name[0][0] }}"></h3>
+      <h3>Code: <input type="text" value="{{ info[0][11] }}" readonly disabled name="code"></h3>
+      <h3>Password: <input type="password" name="password"> / Confirmation: <input type="password" name="confirmation"> </h3>
+      <button type="submit">Update {{ info[0][2] }}</button>
+    </form>
     <hr>
     <h3>All Classes Taught By This Teacher</h3>
     <div class="table-responsive">

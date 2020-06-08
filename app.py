@@ -570,7 +570,7 @@ def admin_teachers_dashboard(d_code):
                 }).fetchall()[0][0]
 
             for subject in subjects:
-                print("hi")
+
                 sub = subject.split("-")
 
                 try:
@@ -853,60 +853,95 @@ def students(d_code):
     except IndexError:
         abort(403)
 
+
     if request.method == "POST":
         if request.form.get("name") and request.form.get(
                 "address") and request.form.get("grade") and request.form.get(
                     "email") and request.form.get(
                         "s_code") and request.form.get("t_code"):
-            pass
+
+                            d_id = dcode_to_did(d_code)
+                            subjects = request.form.get("subjects").split(", ")
+                            for subject in subjects:
+
+                                sub = subject.split("-")
+
+                                try:
+                                    sub_id = c.execute(
+                                        "SELECT course_id FROM courses WHERE district_id=:d_id AND code=:code",
+                                        {
+                                            "d_id": d_id,
+                                            "code": sub[1]
+                                        }).fetchall()[0][0]
+                                except IndexError:
+                                    return render_template(
+                                        "error.html",
+                                        title="Course Not Found",
+                                        details="Please check your course code")
+
+                                c.execute(
+                                    "INSERT INTO teacher_subject (teacher_id, period, subject_id) VALUES (:t_id, :p, :s)",
+                                    {
+                                        "t_id": t_id,
+                                        "p": sub[0],
+                                        "s": sub_id
+                                    })
+
+                                conn.commit()
 
     else:
         return render_template("district-admin/students.html")
 
 
-@app.route("/district-admin/<string:d_code>/details/teacher/<string:t_code>")
+@app.route("/district-admin/<string:d_code>/details/teacher/<string:t_code>", methods=["GET", "POST"])
 def district_admin_teacher_detail(d_code, t_code):
 
-    user_info = c.execute("SELECT * FROM users WHERE user_id=:user_id", {
-        "user_id": session.get("user_id")
-    }).fetchall()
-    try:
-        district = c.execute("SELECT * FROM districts WHERE code=:code", {
-            "code": d_code
+    if request.method == "POST":
+        d_id = c.execute("SELECT * FROM districts WHERE code=:d_code", {"d_code": d_code}).fetchall()[0][0]
+        c.execute("UPDATE users SET name=:name, address=:address, email=:email, password=:password WHERE district_id=:d_id AND code=:code", {"name": request.form.get("name"), "address": request.form.get("address"), "email": request.form.get("email"), "password": generate_password_hash(request.form.get("password"), method="pbkdf2:sha256", salt_length=8), "d_id": d_id, "code": t_code})
+        conn.commit()
+        return render_template("success.html", title="Updated Teacher Successfully!")
+    else:
+        user_info = c.execute("SELECT * FROM users WHERE user_id=:user_id", {
+            "user_id": session.get("user_id")
+        }).fetchall()
+        try:
+            district = c.execute("SELECT * FROM districts WHERE code=:code", {
+                "code": d_code
+            }).fetchall()[0][0]
+        except IndexError:
+            abort(403)
+
+        d_id = c.execute("SELECT district_id FROM districts WHERE code=:d_code", {
+            "d_code": d_code
         }).fetchall()[0][0]
-    except IndexError:
-        abort(403)
 
-    d_id = c.execute("SELECT district_id FROM districts WHERE code=:d_code", {
-        "d_code": d_code
-    }).fetchall()[0][0]
+        info = c.execute(
+            "SELECT * FROM users WHERE code=:t_code AND district_id=:d_id", {
+                "t_code": t_code,
+                "d_id": d_id
+            }).fetchall()
 
-    info = c.execute(
-        "SELECT * FROM users WHERE code=:t_code AND district_id=:d_id", {
-            "t_code": t_code,
-            "d_id": d_id
-        }).fetchall()
+        s_name = c.execute(
+            "SELECT name FROM schools WHERE district_id=:d_id AND school_id=:s_id",
+            {
+                "d_id": d_id,
+                "s_id": info[0][1]
+            }).fetchall()
+        print(info)
 
-    s_name = c.execute(
-        "SELECT name FROM schools WHERE district_id=:d_id AND school_id=:s_id",
-        {
-            "d_id": d_id,
-            "s_id": info[0][1]
-        }).fetchall()
-    print(info)
+        ts = c.execute(
+            "SELECT * FROM teacher_subject JOIN courses ON courses.course_id=teacher_subject.subject_id WHERE teacher_id=:t_id ORDER BY teacher_subject.period ASC",
+            {
+                "t_id": info[0][0]
+            }).fetchall()
 
-    ts = c.execute(
-        "SELECT * FROM teacher_subject JOIN courses ON courses.course_id=teacher_subject.subject_id WHERE teacher_id=:t_id ORDER BY teacher_subject.period ASC",
-        {
-            "t_id": info[0][0]
-        }).fetchall()
-
-    print(ts)
-    # return str(info + ts)
-    return render_template("district-admin/teacher-detail.html",
-                           info=info,
-                           ts=ts,
-                           s_name=s_name)
+        print(ts)
+        # return str(info + ts)
+        return render_template("district-admin/teacher-detail.html",
+                            info=info,
+                            ts=ts,
+                            s_name=s_name)
 
 
 @app.route("/district-admin/<string:d_code>/courses", methods=["GET", "POST"])
@@ -1098,12 +1133,14 @@ def profile():
 
 
 @app.route("/logout")
+@login_required
 def logout():
     session.clear()
     return redirect("/")
 
 
 @app.route("/chat")
+@login_required
 def chat():
     return render_template("chat.html")
 
@@ -1115,4 +1152,4 @@ def messageDisplay(data):
 
 
 if __name__ == "__main__":
-    socketio.run(app)
+    socketio.run(app, debug=True)
