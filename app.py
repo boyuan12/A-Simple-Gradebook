@@ -1176,8 +1176,8 @@ def schedules(d_code):
             for i in range(2, sheet.max_column + 1):
                 get_subject = False
                 student_code = sheet.cell(row=i, column=1).value
-                student = c.execute("SELECT * FROM users WHERE code=:u_id AND role='student' AND district_id=:d_id", {"u_id": student_code, "d_id": d_id}).fetchall()
-                if len(student) != 1:
+                student_id = c.execute("SELECT * FROM users WHERE code=:u_id AND role='student' AND district_id=:d_id", {"u_id": student_code, "d_id": d_id}).fetchall()[0][0]
+                if len(student_id) != 1:
                     return render_template("error.html", title="Error: student not found", details=f"The student id you provided on excel sheet for schedule at row {i} ({student_code}) is not valid. Please double check.")
                 # print(sheet.cell(row=2, column=2))
                 choices = [sheet.cell(row=i, column=j).value for j in range(2, 7)]
