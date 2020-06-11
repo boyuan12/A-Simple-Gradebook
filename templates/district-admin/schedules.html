@@ -1,0 +1,21 @@
+{% extends "district-admin/dashboard-layout.html" %}
+
+{% block title %}
+    Student's Schedules
+{% endblock %}
+
+{% block main %}
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Student Schedule</h1>
+  </div>
+  <p>This will help you to schedule your district's student's schedule. The maximum selection is 6. WE ONLY ACCEPT EXCEL due to the complexity. Feel free to <a href="/static/District-Schedule-Template.xlsx">download the template</a> to get started.</p>
+
+  <form action="/district-admin/{{ session['district_code'] }}/schedules" method="POST" enctype="multipart/form-data">
+    <div class="form-group">
+        <label for="exampleInputEmail1">Upload Your Excel file</label>
+        <input type="file" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" name="file" required>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+{% endblock %}

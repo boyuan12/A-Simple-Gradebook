@@ -27,17 +27,19 @@
               <th>Course Grade</th>
               <th>Course Code</th>
               <th>Period</th>
+              <th>CE / ME</th>
               <th>Details / Edit / Delete</th>
             </tr>
           </thead>
           <tbody>
             {% for t in ts %}
               <tr>
-                <td>{{ t[5] }}</td>
-                <td>{{ t[9] }}</td>
-                <td>{{ t[6] }}</td>
-                <td>{{ t[10] }}</td>
+                <td>{{ t[7] }}</td>
+                <td>{{ t[11] }}</td>
+                <td>{{ t[8] }}</td>
+                <td>{{ t[12] }}</td>
                 <td>{{ t[2] }}</td>
+                <td>{{ t[4] }}/{{ t[5] }}</td>
                 <td><a href="edit/course/{{ t[4] }}"><i class="fas fa-info-circle"></i> / <i class="fas fa-edit"></i></a> / <a href="delete/teacher/{{ t[5] }}"><i class="fas fa-trash-alt" style="color:red;"></i></a></td>
               </tr>
             {% endfor %}

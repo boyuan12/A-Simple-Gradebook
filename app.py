@@ -587,11 +587,12 @@ def admin_teachers_dashboard(d_code):
                         details="Please check your course code")
 
                 c.execute(
-                    "INSERT INTO teacher_subject (teacher_id, period, subject_id) VALUES (:t_id, :p, :s)",
+                    "INSERT INTO teacher_subject (teacher_id, period, subject_id, current_enrollment, max_enrollment) VALUES (:t_id, :p, :s, 0, :max)",
                     {
                         "t_id": t_id,
                         "p": sub[0],
-                        "s": sub_id
+                        "s": sub_id,
+                        "max": sub[2]
                     })
 
                 conn.commit()
@@ -930,7 +931,7 @@ def district_admin_teacher_detail(d_code, t_code):
                 "d_id": d_id,
                 "s_id": info[0][1]
             }).fetchall()
-        print(info)
+        # print(info)
 
         ts = c.execute(
             "SELECT * FROM teacher_subject JOIN courses ON courses.course_id=teacher_subject.subject_id WHERE teacher_id=:t_id ORDER BY teacher_subject.period ASC",
@@ -939,7 +940,7 @@ def district_admin_teacher_detail(d_code, t_code):
             }).fetchall()
 
         print(ts)
-        # return str(info + ts)
+        # return str(info + ts) index # 4 - current, 5 - max
         return render_template("district-admin/teacher-detail.html",
                             info=info,
                             ts=ts,
@@ -995,7 +996,7 @@ def district_admin_courses(d_code):
                 "district_id": d_id,
                 "school_id": s_code[0][0],
                 "description": request.form.get("description"),
-                "code": request.form.get("c_code")
+                "code": request.form.get("c_code"),
             })
         conn.commit()
 
@@ -1151,6 +1152,71 @@ def chat():
 def messageDisplay(data):
     name = c.execute("SELECT name FROM users WHERE user_id=:u_id", {"u_id": session.get("user_id")}).fetchall()[0][0]
     emit("show message", dict(message=data["message"], name=name, timestamp=data["timestamp"]), broadcast=True)
+
+
+@app.route("/district-admin/<string:d_code>/schedules", methods=["GET", "POST"])
+def schedules(d_code):
+
+    d_id = c.execute("SELECT district_id FROM districts WHERE code=:code", {
+        "code": session.get("district_code")
+    }).fetchall()[0][0]
+
+    if request.method == "POST":
+
+        if request.files["file"]:
+
+            filename = upload_file(app.config["UPLOAD_FOLDER"])
+            wb = load_workbook(
+                os.path.join(app.config["UPLOAD_FOLDER"], filename))
+            sheet = wb.active
+
+            if sheet.max_column > 8:
+                return render_template("error.html", title="Error: Excel", details="Your excel file can only contains maximum 8 columns")
+
+            for i in range(2, sheet.max_column + 1):
+                get_subject = False
+                student_code = sheet.cell(row=i, column=1).value
+                student = c.execute("SELECT * FROM users WHERE code=:u_id AND role='student' AND district_id=:d_id", {"u_id": student_code, "d_id": d_id}).fetchall()
+                if len(student) != 1:
+                    return render_template("error.html", title="Error: student not found", details=f"The student id you provided on excel sheet for schedule at row {i} ({student_code}) is not valid. Please double check.")
+                # print(sheet.cell(row=2, column=2))
+                choices = [sheet.cell(row=i, column=j).value for j in range(2, 7)]
+                # print(choices)
+                for choice in choices:
+                    try:
+                        subject_id = c.execute("SELECT * FROM courses WHERE code=:code AND district_id=:d_id", {"code": choice, "d_id": d_id}).fetchall()[0][0]
+                    except IndexError:
+                        return render_template("error.html", title="Didn't find the course code", details=f"We didn't find this course. Please double check the course code. Course Code Used {choice}")
+                    avails = c.execute("SELECT * FROM teacher_subject WHERE subject_id=:id", {"id": subject_id}).fetchall()
+                    # print(avails)
+
+                    while len(avails) != 0:
+                        # do still have avail
+                        i = 0
+                        if avails[i][5] > avails[i][4]:
+                            c.execute("UPDATE teacher_subject SET current_enrollment=:c WHERE id=:id", {"c": avails[i][4]+1, "id": avails[i][0]})
+                            c.execute("INSERT INTO student_subject (student_id, teacher_subject_id, teacher_id, subject_id, period) VALUES (:s, :tsi, :t, :sub, :p)", {"s": student_id, "tsi": avails[i][0], "t": avails[i][1], "sub": avails[i][3], "p": avails[i][2]})
+                            conn.commit()
+                            get_subject = True
+                            print(get_subject)
+                            break
+                        try:
+                            avails.pop(0)
+                        except IndexError:
+                            break
+
+                    if get_subject:
+                        break
+
+                if get_subject:
+                    break
+
+            return render_template("success.html", title="Success! Student's schedule been uploaded successfully.")
+        return "please fill out all required fields"
+
+    else:
+        return render_template("district-admin/schedules.html")
+
 
 
 if __name__ == "__main__":

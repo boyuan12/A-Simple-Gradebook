@@ -29,4 +29,4 @@ jobs:
       run: |
         python test.py
     - name: YAPF Python Code Formatting Check
-      uses: AlexanderMelde/yapf-action@v1.0
+      uses: AlexanderMelde/yapf-action@v1.
