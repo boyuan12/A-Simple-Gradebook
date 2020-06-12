@@ -854,13 +854,12 @@ def students(d_code):
     except IndexError:
         abort(403)
 
-
     if request.method == "POST":
         if request.form.get("name") and request.form.get(
                 "address") and request.form.get("grade") and request.form.get(
                     "email") and request.form.get(
                         "s_code") and request.form.get("t_code"):
-                            """
+            """
                             d_id = dcode_to_did(d_code)
                             subjects = request.form.get("subjects").split(", ")
                             for subject in subjects:
@@ -896,14 +895,35 @@ def students(d_code):
         return render_template("district-admin/students.html")
 
 
-@app.route("/district-admin/<string:d_code>/details/teacher/<string:t_code>", methods=["GET", "POST"])
+@app.route("/district-admin/<string:d_code>/details/teacher/<string:t_code>",
+           methods=["GET", "POST"])
 def district_admin_teacher_detail(d_code, t_code):
 
     if request.method == "POST":
-        d_id = c.execute("SELECT * FROM districts WHERE code=:d_code", {"d_code": d_code}).fetchall()[0][0]
-        c.execute("UPDATE users SET name=:name, address=:address, email=:email, password=:password WHERE district_id=:d_id AND code=:code", {"name": request.form.get("name"), "address": request.form.get("address"), "email": request.form.get("email"), "password": generate_password_hash(request.form.get("password"), method="pbkdf2:sha256", salt_length=8), "d_id": d_id, "code": t_code})
+        d_id = c.execute("SELECT * FROM districts WHERE code=:d_code", {
+            "d_code": d_code
+        }).fetchall()[0][0]
+        c.execute(
+            "UPDATE users SET name=:name, address=:address, email=:email, password=:password WHERE district_id=:d_id AND code=:code",
+            {
+                "name":
+                request.form.get("name"),
+                "address":
+                request.form.get("address"),
+                "email":
+                request.form.get("email"),
+                "password":
+                generate_password_hash(request.form.get("password"),
+                                       method="pbkdf2:sha256",
+                                       salt_length=8),
+                "d_id":
+                d_id,
+                "code":
+                t_code
+            })
         conn.commit()
-        return render_template("success.html", title="Updated Teacher Successfully!")
+        return render_template("success.html",
+                               title="Updated Teacher Successfully!")
     else:
         user_info = c.execute("SELECT * FROM users WHERE user_id=:user_id", {
             "user_id": session.get("user_id")
@@ -915,9 +935,10 @@ def district_admin_teacher_detail(d_code, t_code):
         except IndexError:
             abort(403)
 
-        d_id = c.execute("SELECT district_id FROM districts WHERE code=:d_code", {
-            "d_code": d_code
-        }).fetchall()[0][0]
+        d_id = c.execute(
+            "SELECT district_id FROM districts WHERE code=:d_code", {
+                "d_code": d_code
+            }).fetchall()[0][0]
 
         info = c.execute(
             "SELECT * FROM users WHERE code=:t_code AND district_id=:d_id", {
@@ -942,9 +963,9 @@ def district_admin_teacher_detail(d_code, t_code):
         print(ts)
         # return str(info + ts) index # 4 - current, 5 - max
         return render_template("district-admin/teacher-detail.html",
-                            info=info,
-                            ts=ts,
-                            s_name=s_name)
+                               info=info,
+                               ts=ts,
+                               s_name=s_name)
 
 
 @app.route("/district-admin/<string:d_code>/courses", methods=["GET", "POST"])
@@ -1150,11 +1171,16 @@ def chat():
 
 @socketio.on('broadcast message')
 def messageDisplay(data):
-    name = c.execute("SELECT name FROM users WHERE user_id=:u_id", {"u_id": session.get("user_id")}).fetchall()[0][0]
-    emit("show message", dict(message=data["message"], name=name, timestamp=data["timestamp"]), broadcast=True)
+    name = c.execute("SELECT name FROM users WHERE user_id=:u_id", {
+        "u_id": session.get("user_id")
+    }).fetchall()[0][0]
+    emit("show message",
+         dict(message=data["message"], name=name, timestamp=data["timestamp"]),
+         broadcast=True)
 
 
-@app.route("/district-admin/<string:d_code>/schedules", methods=["GET", "POST"])
+@app.route("/district-admin/<string:d_code>/schedules",
+           methods=["GET", "POST"])
 def schedules(d_code):
 
     d_id = c.execute("SELECT district_id FROM districts WHERE code=:code", {
@@ -1171,31 +1197,73 @@ def schedules(d_code):
             sheet = wb.active
 
             if sheet.max_column > 8:
-                return render_template("error.html", title="Error: Excel", details="Your excel file can only contains maximum 8 columns")
+                return render_template(
+                    "error.html",
+                    title="Error: Excel",
+                    details=
+                    "Your excel file can only contains maximum 8 columns")
 
             for i in range(2, sheet.max_column + 1):
                 get_subject = False
                 student_code = sheet.cell(row=i, column=1).value
-                student_id = c.execute("SELECT * FROM users WHERE code=:u_id AND role='student' AND district_id=:d_id", {"u_id": student_code, "d_id": d_id}).fetchall()[0][0]
+                student_id = c.execute(
+                    "SELECT * FROM users WHERE code=:u_id AND role='student' AND district_id=:d_id",
+                    {
+                        "u_id": student_code,
+                        "d_id": d_id
+                    }).fetchall()[0][0]
                 if len(student_id) != 1:
-                    return render_template("error.html", title="Error: student not found", details=f"The student id you provided on excel sheet for schedule at row {i} ({student_code}) is not valid. Please double check.")
+                    return render_template(
+                        "error.html",
+                        title="Error: student not found",
+                        details=
+                        f"The student id you provided on excel sheet for schedule at row {i} ({student_code}) is not valid. Please double check."
+                    )
                 # print(sheet.cell(row=2, column=2))
-                choices = [sheet.cell(row=i, column=j).value for j in range(2, 7)]
+                choices = [
+                    sheet.cell(row=i, column=j).value for j in range(2, 7)
+                ]
                 # print(choices)
                 for choice in choices:
                     try:
-                        subject_id = c.execute("SELECT * FROM courses WHERE code=:code AND district_id=:d_id", {"code": choice, "d_id": d_id}).fetchall()[0][0]
+                        subject_id = c.execute(
+                            "SELECT * FROM courses WHERE code=:code AND district_id=:d_id",
+                            {
+                                "code": choice,
+                                "d_id": d_id
+                            }).fetchall()[0][0]
                     except IndexError:
-                        return render_template("error.html", title="Didn't find the course code", details=f"We didn't find this course. Please double check the course code. Course Code Used {choice}")
-                    avails = c.execute("SELECT * FROM teacher_subject WHERE subject_id=:id", {"id": subject_id}).fetchall()
+                        return render_template(
+                            "error.html",
+                            title="Didn't find the course code",
+                            details=
+                            f"We didn't find this course. Please double check the course code. Course Code Used {choice}"
+                        )
+                    avails = c.execute(
+                        "SELECT * FROM teacher_subject WHERE subject_id=:id", {
+                            "id": subject_id
+                        }).fetchall()
                     # print(avails)
 
                     while len(avails) != 0:
                         # do still have avail
                         i = 0
                         if avails[i][5] > avails[i][4]:
-                            c.execute("UPDATE teacher_subject SET current_enrollment=:c WHERE id=:id", {"c": avails[i][4]+1, "id": avails[i][0]})
-                            c.execute("INSERT INTO student_subject (student_id, teacher_subject_id, teacher_id, subject_id, period) VALUES (:s, :tsi, :t, :sub, :p)", {"s": student_id, "tsi": avails[i][0], "t": avails[i][1], "sub": avails[i][3], "p": avails[i][2]})
+                            c.execute(
+                                "UPDATE teacher_subject SET current_enrollment=:c WHERE id=:id",
+                                {
+                                    "c": avails[i][4] + 1,
+                                    "id": avails[i][0]
+                                })
+                            c.execute(
+                                "INSERT INTO student_subject (student_id, teacher_subject_id, teacher_id, subject_id, period) VALUES (:s, :tsi, :t, :sub, :p)",
+                                {
+                                    "s": student_id,
+                                    "tsi": avails[i][0],
+                                    "t": avails[i][1],
+                                    "sub": avails[i][3],
+                                    "p": avails[i][2]
+                                })
                             conn.commit()
                             get_subject = True
                             print(get_subject)
@@ -1211,12 +1279,14 @@ def schedules(d_code):
                 if get_subject:
                     break
 
-            return render_template("success.html", title="Success! Student's schedule been uploaded successfully.")
+            return render_template(
+                "success.html",
+                title="Success! Student's schedule been uploaded successfully."
+            )
         return "please fill out all required fields"
 
     else:
         return render_template("district-admin/schedules.html")
-
 
 
 if __name__ == "__main__":
