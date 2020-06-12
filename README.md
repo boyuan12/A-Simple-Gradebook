@@ -1,5 +1,5 @@
 # A Simple Gradebook
-![Python application](https://github.com/boyuan12/A-Simple-Gradebook/workflows/Python%20application/badge.svg)
+![Python application](https://github.com/boyuan12/A-Simple-Gradebook/workflows/A%20Simple%20Gradebook%20Web/badge.svg)
 [![Code style: yapf](https://img.shields.io/badge/code%20style-yapf-blue)](https://github.com/google/yapf)
 
 
