@@ -28,5 +28,10 @@ jobs:
     - name: Test with unittest
       run: |
         python test.py
+
     - name: YAPF Python Code Formatting Check
       uses: AlexanderMelde/yapf-action@v1.0
+
+    - name: Coveralls GitHub Action
+      uses: coverallsapp/github-action@v1.1.1
+
