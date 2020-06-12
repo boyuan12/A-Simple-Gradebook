@@ -2,7 +2,7 @@ import unittest
 
 from app import app
 import os
-import requests
+# import requests
 
 from time import sleep
 import io
