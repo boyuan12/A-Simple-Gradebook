@@ -45,4 +45,6 @@ def login_required(f):
 
 
 def dcode_to_did(d_code):
-    return c.execute("SELECT * FROM districts WHERE code=:d_code", {"d_code": d_code}).fetchall()[0][0]
+    return c.execute("SELECT * FROM districts WHERE code=:d_code", {
+        "d_code": d_code
+    }).fetchall()[0][0]
