@@ -51,15 +51,26 @@
                 <li class="nav-item active">
                     <a class="nav-link" href="/schools">All Schools</a>
                 </li>
-                <li class="nav-item active">
-                  <a class="nav-link" href="/create-school">Create School (No School District Associated)</a>
-                </li>
-                <li class="nav-item active">
-                    <a class="nav-link" href="/create-district">Create School District</a>
-                </li>
-                <li class="nav-item active">
-                    <a class="nav-link" href="/login">Login</a>
-                </li>
+                {% if not session["user_id"] %}
+                  <li class="nav-item active">
+                    <a class="nav-link" href="/create-school">Create School (No School District Associated)</a>
+                  </li>
+                  <li class="nav-item active">
+                      <a class="nav-link" href="/create-district">Create School District</a>
+                  </li>
+                  <li class="nav-item active">
+                      <a class="nav-link" href="/login">Login</a>
+                  </li>
+                {% endif %}
+                {% if session["status"] == "district-admin" %}
+                  <li class="nav-item active">
+                    <a class="nav-link" href="/district-admin/{{ session['district_code']}}">District Admin Dashboard</a>
+                  </li>
+                {% elif session["status"] == "teacher" %}
+                  <li class="nav-item active">
+                    <a class="nav-link" href="/teacher">Teacher Dashboard</a>
+                  </li>
+                {% endif %}
                 <!--
                 <li class="nav-item dropdown">
                   <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">

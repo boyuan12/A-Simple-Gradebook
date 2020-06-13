@@ -48,3 +48,31 @@ def dcode_to_did(d_code):
     return c.execute("SELECT * FROM districts WHERE code=:d_code", {
         "d_code": d_code
     }).fetchall()[0][0]
+
+
+def get_best_elective(wishes, exists, user_id):
+    """
+    Get the best elective based on the provided arguments.
+
+    Args:
+        codes: list - contains subject_id that their wish electives
+        exist: list - contains periods that they already had
+        user_id: int - the primary key from users table for the student
+    """
+    d_id = c.execute("SELECT district_id FROM users WHERE user_id=:id", {"id": user_id}).fetchall()[0][0]
+    # loop through their wishes
+    for wish in wishes:
+        # check for available periods
+        avails = {}
+        subs = c.execute("SELECT period FROM teacher_subject WHERE subject_id=:s_id AND current_enrollment < max_enrollment").fetchall()[0]
+        subs_2 = c.execute("SELECT id FROM teacher_subject WHERE subject_id=:s_id AND current_enrollment < max_enrollment").fetchall()[0]
+        # compare with exists period
+        if (sorted(list(subs)) == sorted(exists)):
+            continue
+        else:
+            avail = [x for x in subs if x not in exists]
+            period = random.choice(avail)
+            avails = c.execute("")
+
+
+    # get a random elective that is available

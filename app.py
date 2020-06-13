@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, flash, redirect, session, json, abort
 from flask_socketio import SocketIO, emit
 import sqlite3
-from helpers import upload_file, send_email, random_string, login_required
+from helpers import upload_file, send_email, random_string, login_required, dcode_to_did, get_best_elective
 from werkzeug.security import generate_password_hash, check_password_hash
 from termcolor import colored
 from werkzeug.exceptions import HTTPException
@@ -261,8 +261,10 @@ def login():
                     "SELECT * FROM districts WHERE district_id=:id", {
                         "id": results[0][6]
                     }).fetchall()
+                session["status"] = "district-admin"
                 return redirect(f"/district-admin/{district_info[0][5]}")
             elif results[0][5] == "teacher":
+                session["status"] = "teacher"
                 return redirect("/teacher")
 
         flash("Wrong credentials, please register before use the service",
@@ -853,13 +855,17 @@ def students(d_code):
         }).fetchall()[0][0]
     except IndexError:
         abort(403)
+    d_id = c.execute("SELECT * FROM districts WHERE code=:d_code", {
+        "d_code": d_code
+    }).fetchall()[0][0]
 
     if request.method == "POST":
         if request.form.get("name") and request.form.get(
                 "address") and request.form.get("grade") and request.form.get(
                     "email") and request.form.get(
                         "s_code") and request.form.get("t_code"):
-            """
+
+                            """
                             d_id = dcode_to_did(d_code)
                             subjects = request.form.get("subjects").split(", ")
                             for subject in subjects:
@@ -888,9 +894,15 @@ def students(d_code):
                                     })
 
                                 conn.commit()
-                                """
-        pass
+                            """
+                            school_id = c.execute("SELECT school_id FROM schools WHERE district_id=:d_id AND code=:code", {"d_id": d_id, "code": request.form.get("s_code")}).fetchall()
+                            if len(school_id) == 0:
+                                return "school not found"
+                            c.execute("INSERT INTO users (school_id, name, username, password, role, district_id, email, verification, address, role_description, code) VALUES (:s_id, :name, :user, :password, :role, :district_id, :email, :ver, :address, :role_d, :code)", {"s_id": school_id[0][0], "name": request.form.get("name"), "user": request.form.get("email"), "password": generate_password_hash(random_string(10), method="pbkdf2:sha256",salt_length=8), "role": "student", "district_id": d_id, "email": request.form.get("email"), "ver": "verify", "address": request.form.get("address"), "role_d": f"Grade {request.form.get('grade')} student", "code": request.form.get("t_code")})
 
+                            conn.commit()
+
+                            return redirect(f"/district-admin/{d_code}/students")
     else:
         return render_template("district-admin/students.html")
 
@@ -1203,86 +1215,27 @@ def schedules(d_code):
                     details=
                     "Your excel file can only contains maximum 8 columns")
 
-            for i in range(2, sheet.max_column + 1):
-                get_subject = False
-                student_code = sheet.cell(row=i, column=1).value
-                student_id = c.execute(
-                    "SELECT * FROM users WHERE code=:u_id AND role='student' AND district_id=:d_id",
-                    {
-                        "u_id": student_code,
-                        "d_id": d_id
-                    }).fetchall()[0][0]
-                if len(student_id) != 1:
-                    return render_template(
-                        "error.html",
-                        title="Error: student not found",
-                        details=
-                        f"The student id you provided on excel sheet for schedule at row {i} ({student_code}) is not valid. Please double check."
-                    )
-                # print(sheet.cell(row=2, column=2))
-                choices = [
-                    sheet.cell(row=i, column=j).value for j in range(2, 7)
-                ]
-                # print(choices)
-                for choice in choices:
-                    try:
-                        subject_id = c.execute(
-                            "SELECT * FROM courses WHERE code=:code AND district_id=:d_id",
-                            {
-                                "code": choice,
-                                "d_id": d_id
-                            }).fetchall()[0][0]
-                    except IndexError:
-                        return render_template(
-                            "error.html",
-                            title="Didn't find the course code",
-                            details=
-                            f"We didn't find this course. Please double check the course code. Course Code Used {choice}"
-                        )
-                    avails = c.execute(
-                        "SELECT * FROM teacher_subject WHERE subject_id=:id", {
-                            "id": subject_id
-                        }).fetchall()
-                    # print(avails)
-
-                    while len(avails) != 0:
-                        # do still have avail
-                        i = 0
-                        if avails[i][5] > avails[i][4]:
-                            c.execute(
-                                "UPDATE teacher_subject SET current_enrollment=:c WHERE id=:id",
-                                {
-                                    "c": avails[i][4] + 1,
-                                    "id": avails[i][0]
-                                })
-                            c.execute(
-                                "INSERT INTO student_subject (student_id, teacher_subject_id, teacher_id, subject_id, period) VALUES (:s, :tsi, :t, :sub, :p)",
-                                {
-                                    "s": student_id,
-                                    "tsi": avails[i][0],
-                                    "t": avails[i][1],
-                                    "sub": avails[i][3],
-                                    "p": avails[i][2]
-                                })
-                            conn.commit()
-                            get_subject = True
-                            print(get_subject)
-                            break
-                        try:
-                            avails.pop(0)
-                        except IndexError:
-                            break
-
-                    if get_subject:
-                        break
-
-                if get_subject:
-                    break
+            # loop through each row
+            for i in range(2, sheet.max_row + 1):
+                # validate student id
+                student_id = c.execute("SELECT user_id FROM users WHERE code=:code", {"code": sheet.cell(row=i, column=1).value}).fetchall()
+                if len(student_id) == 0:
+                    return "Student Code is NOT VALID"
+                # get elective wishes course id and store in a list
+                wishes = [sheet.cell(row=i, column=j).value for j in range(2, 8)]
+                subs = []
+                for wish in wishes:
+                    sub_id = c.execute("SELECT subject_id FROM subjects WHERE code=:code", {"code": wish}).fetchall()[0][0]
+                    subs.append(sub_id)
+                # get already enrolled course's period and store in a list
+                periods = c.execute("SELECT period FROM student_subject WHERE student_id=:s_id", {"s_id": student_id[0][0]}).fetchall()
+                get_best_elective(subs, periods, student_id)
 
             return render_template(
                 "success.html",
                 title="Success! Student's schedule been uploaded successfully."
             )
+
         return "please fill out all required fields"
 
     else:
