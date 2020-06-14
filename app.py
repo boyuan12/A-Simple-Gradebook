@@ -1,7 +1,8 @@
 from flask import Flask, render_template, request, flash, redirect, session, json, abort
 from flask_socketio import SocketIO, emit
 import sqlite3
-from helpers import upload_file, send_email, random_string, login_required, dcode_to_did, get_best_elective
+import random
+from helpers import upload_file, send_email, random_string, login_required, dcode_to_did
 from werkzeug.security import generate_password_hash, check_password_hash
 from termcolor import colored
 from werkzeug.exceptions import HTTPException
@@ -60,6 +61,42 @@ def handle_exception(e):
     response.content_type = "application/json"
     return response
 
+def get_best_elective(wishes, exists, user_id):
+    """
+    ### Get the best elective based on the provided arguments.
+
+    Args:
+    - codes: list - contains subject_id that their wish electives
+    - exist: list - contains periods that they already had
+    - user_id: int - the primary key from users table for the student
+    """
+
+    get_elective = False
+    d_id = c.execute("SELECT district_id FROM users WHERE user_id=:id", {"id": user_id}).fetchall()[0][0]
+    # loop through their wishes
+    for wish in wishes:
+        # check for available periods
+        avails = {}
+        periods = []
+        subs = c.execute("SELECT period FROM teacher_subject WHERE subject_id=:s_id AND current_enrollment < max_enrollment", {"s_id": wish}).fetchall()
+        for i in subs:
+            periods.append(i[0])
+        # compare with exists period
+        if (sorted(periods) == sorted(exists)):
+            continue
+        else:
+            avail = [x for x in subs if x not in exists] # [3]
+            period = random.choice(avail) # choose a random period
+            avails = c.execute("SELECT id FROM teacher_subject WHERE subject_id=:s_id AND current_enrollment < max_enrollment AND period=:period", {"s_id": wish, "period": period[0]}).fetchall()
+            ts_id = random.choice(avails)
+            print(ts_id)
+            c.execute("UPDATE teacher_subject SET current_enrollment = :new WHERE id=:id", {"new": c.execute("SELECT current_enrollment FROM teacher_subject WHERE id=:id", {"id": ts_id[0]}).fetchall()[0][0] + 1, "id": ts_id[0]})
+            c.execute("INSERT INTO student_subject (student_id, teacher_subject_id) VALUES (:s_id, :ts_id)", {"s_id": user_id, "ts_id": ts_id[0]})
+            conn.commit()
+            get_elective = True
+
+
+    # get a random elective that is available (possible machine learning)
 
 @app.route("/")
 def index():
@@ -589,12 +626,13 @@ def admin_teachers_dashboard(d_code):
                         details="Please check your course code")
 
                 c.execute(
-                    "INSERT INTO teacher_subject (teacher_id, period, subject_id, current_enrollment, max_enrollment) VALUES (:t_id, :p, :s, 0, :max)",
+                    "INSERT INTO teacher_subject (teacher_id, period, subject_id, current_enrollment, max_enrollment, district_id) VALUES (:t_id, :p, :s, 0, :max, :d_id)",
                     {
                         "t_id": t_id,
                         "p": sub[0],
                         "s": sub_id,
-                        "max": sub[2]
+                        "max": sub[2],
+                        "d_id": d_id
                     })
 
                 conn.commit()
@@ -1225,11 +1263,18 @@ def schedules(d_code):
                 wishes = [sheet.cell(row=i, column=j).value for j in range(2, 8)]
                 subs = []
                 for wish in wishes:
-                    sub_id = c.execute("SELECT subject_id FROM subjects WHERE code=:code", {"code": wish}).fetchall()[0][0]
+                    try:
+                        sub_id = c.execute("SELECT course_id FROM courses WHERE code=:code AND district_id=:d_id", {"code": wish, "d_id": d_id}).fetchall()[0][0]
+                    except IndexError:
+                        return render_template("error.html", title="Course not found")
                     subs.append(sub_id)
                 # get already enrolled course's period and store in a list
-                periods = c.execute("SELECT period FROM student_subject WHERE student_id=:s_id", {"s_id": student_id[0][0]}).fetchall()
-                get_best_elective(subs, periods, student_id)
+                ts_ids = c.execute("SELECT teacher_subject_id FROM student_subject WHERE student_id=:s_id", {"s_id": student_id[0][0]}).fetchall()
+                periods = []
+                for i in ts_ids:
+                    period = c.execute("SELECT period FROM teacher_subject WHERE id=:id", {"id": i}).fetchall()[0][0]
+                    periods.append(period)
+                get_best_elective(subs, periods, student_id[0][0])
 
             return render_template(
                 "success.html",

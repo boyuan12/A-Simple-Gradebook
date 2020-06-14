@@ -52,27 +52,36 @@ def dcode_to_did(d_code):
 
 def get_best_elective(wishes, exists, user_id):
     """
-    Get the best elective based on the provided arguments.
+    ### Get the best elective based on the provided arguments.
 
     Args:
-        codes: list - contains subject_id that their wish electives
-        exist: list - contains periods that they already had
-        user_id: int - the primary key from users table for the student
+    - codes: list - contains subject_id that their wish electives
+    - exist: list - contains periods that they already had
+    - user_id: int - the primary key from users table for the student
     """
+
+    get_elective = False
     d_id = c.execute("SELECT district_id FROM users WHERE user_id=:id", {"id": user_id}).fetchall()[0][0]
     # loop through their wishes
     for wish in wishes:
         # check for available periods
         avails = {}
-        subs = c.execute("SELECT period FROM teacher_subject WHERE subject_id=:s_id AND current_enrollment < max_enrollment").fetchall()[0]
-        subs_2 = c.execute("SELECT id FROM teacher_subject WHERE subject_id=:s_id AND current_enrollment < max_enrollment").fetchall()[0]
+        periods = []
+        subs = c.execute("SELECT period FROM teacher_subject WHERE subject_id=:s_id AND current_enrollment < max_enrollment").fetchall()
+        for i in subs:
+            periods.append(i[0])
         # compare with exists period
-        if (sorted(list(subs)) == sorted(exists)):
+        if (sorted(periods) == sorted(exists)):
             continue
         else:
-            avail = [x for x in subs if x not in exists]
-            period = random.choice(avail)
-            avails = c.execute("")
+            avail = [x for x in subs if x not in exists] # [3]
+            period = random.choice(avail) # choose a random period
+            avails = c.execute("SELECT id FROM teacher_subject WHERE subject_id=:s_id AND current_enrollment < max_enrollment AND period=:period").fetchall()
+            ts_id = random.choice(avails)
+            c.execute("UPDATE teacher_subject SET current_enrollment = :new WHERE id=:id", {"new": c.execute("SELECT current_enrollment FROM teacher_subject WHERE id=:id", {"id": ts_id}).fetchall()[0][0] + 1, "id": ts_id})
+            c.execute("INSERT INTO student_subject (student_id, teacher_subject_id) VALUES (:s_id, :ts_id)", {"s_id": user_id})
+            conn.commit()
+            get_elective = True
 
 
-    # get a random elective that is available
+    # get a random elective that is available (possible machine learning)
