@@ -61,6 +61,7 @@ def handle_exception(e):
     response.content_type = "application/json"
     return response
 
+
 def get_best_elective(wishes, exists, user_id):
     """
     ### Get the best elective based on the provided arguments.
@@ -72,31 +73,58 @@ def get_best_elective(wishes, exists, user_id):
     """
 
     get_elective = False
-    d_id = c.execute("SELECT district_id FROM users WHERE user_id=:id", {"id": user_id}).fetchall()[0][0]
+    d_id = c.execute("SELECT district_id FROM users WHERE user_id=:id", {
+        "id": user_id
+    }).fetchall()[0][0]
     # loop through their wishes
     for wish in wishes:
         # check for available periods
         avails = {}
         periods = []
-        subs = c.execute("SELECT period FROM teacher_subject WHERE subject_id=:s_id AND current_enrollment < max_enrollment", {"s_id": wish}).fetchall()
+        subs = c.execute(
+            "SELECT period FROM teacher_subject WHERE subject_id=:s_id AND current_enrollment < max_enrollment",
+            {
+                "s_id": wish
+            }).fetchall()
         for i in subs:
             periods.append(i[0])
         # compare with exists period
         if (sorted(periods) == sorted(exists)):
             continue
         else:
-            avail = [x for x in subs if x not in exists] # [3]
-            period = random.choice(avail) # choose a random period
-            avails = c.execute("SELECT id FROM teacher_subject WHERE subject_id=:s_id AND current_enrollment < max_enrollment AND period=:period", {"s_id": wish, "period": period[0]}).fetchall()
+            avail = [x for x in subs if x not in exists]  # [3]
+            period = random.choice(avail)  # choose a random period
+            avails = c.execute(
+                "SELECT id FROM teacher_subject WHERE subject_id=:s_id AND current_enrollment < max_enrollment AND period=:period",
+                {
+                    "s_id": wish,
+                    "period": period[0]
+                }).fetchall()
             ts_id = random.choice(avails)
             print(ts_id)
-            c.execute("UPDATE teacher_subject SET current_enrollment = :new WHERE id=:id", {"new": c.execute("SELECT current_enrollment FROM teacher_subject WHERE id=:id", {"id": ts_id[0]}).fetchall()[0][0] + 1, "id": ts_id[0]})
-            c.execute("INSERT INTO student_subject (student_id, teacher_subject_id) VALUES (:s_id, :ts_id)", {"s_id": user_id, "ts_id": ts_id[0]})
+            c.execute(
+                "UPDATE teacher_subject SET current_enrollment = :new WHERE id=:id",
+                {
+                    "new":
+                    c.execute(
+                        "SELECT current_enrollment FROM teacher_subject WHERE id=:id",
+                        {
+                            "id": ts_id[0]
+                        }).fetchall()[0][0] + 1,
+                    "id":
+                    ts_id[0]
+                })
+            c.execute(
+                "INSERT INTO student_subject (student_id, teacher_subject_id) VALUES (:s_id, :ts_id)",
+                {
+                    "s_id": user_id,
+                    "ts_id": ts_id[0]
+                })
             conn.commit()
             get_elective = True
 
-
     # get a random elective that is available (possible machine learning)
+
 
 @app.route("/")
 def index():
@@ -902,8 +930,7 @@ def students(d_code):
                 "address") and request.form.get("grade") and request.form.get(
                     "email") and request.form.get(
                         "s_code") and request.form.get("t_code"):
-
-                            """
+            """
                             d_id = dcode_to_did(d_code)
                             subjects = request.form.get("subjects").split(", ")
                             for subject in subjects:
@@ -933,20 +960,119 @@ def students(d_code):
 
                                 conn.commit()
                             """
-                            school_id = c.execute("SELECT school_id FROM schools WHERE district_id=:d_id AND code=:code", {"d_id": d_id, "code": request.form.get("s_code")}).fetchall()
-                            if len(school_id) == 0:
-                                return "school not found"
-                            c.execute("INSERT INTO users (school_id, name, username, password, role, district_id, email, verification, address, role_description, code) VALUES (:s_id, :name, :user, :password, :role, :district_id, :email, :ver, :address, :role_d, :code)", {"s_id": school_id[0][0], "name": request.form.get("name"), "user": request.form.get("email"), "password": generate_password_hash(random_string(10), method="pbkdf2:sha256",salt_length=8), "role": "student", "district_id": d_id, "email": request.form.get("email"), "ver": "verify", "address": request.form.get("address"), "role_d": f"Grade {request.form.get('grade')} student", "code": request.form.get("t_code")})
+            school_id = c.execute(
+                "SELECT school_id FROM schools WHERE district_id=:d_id AND code=:code",
+                {
+                    "d_id": d_id,
+                    "code": request.form.get("s_code")
+                }).fetchall()
+            if len(school_id) == 0:
+                return "school not found"
+            c.execute(
+                "INSERT INTO users (school_id, name, username, password, role, district_id, email, verification, address, role_description, code) VALUES (:s_id, :name, :user, :password, :role, :district_id, :email, :ver, :address, :role_d, :code)",
+                {
+                    "s_id":
+                    school_id[0][0],
+                    "name":
+                    request.form.get("name"),
+                    "user":
+                    request.form.get("email"),
+                    "password":
+                    generate_password_hash(random_string(10),
+                                           method="pbkdf2:sha256",
+                                           salt_length=8),
+                    "role":
+                    "student",
+                    "district_id":
+                    d_id,
+                    "email":
+                    request.form.get("email"),
+                    "ver":
+                    "verify",
+                    "address":
+                    request.form.get("address"),
+                    "role_d":
+                    f"Grade {request.form.get('grade')} student",
+                    "code":
+                    request.form.get("t_code")
+                })
 
-                            conn.commit()
+            conn.commit()
 
-                            return redirect(f"/district-admin/{d_code}/students")
+            return redirect(f"/district-admin/{d_code}/students")
     else:
-        return render_template("district-admin/students.html")
+        students = c.execute(
+            "SELECT * FROM users WHERE district_id=:d_id AND role='student'", {
+                "d_id": d_id
+            }).fetchall()
+        students_list = []
+        for student in students:
+            school = c.execute(
+                "SELECT name FROM schools WHERE school_id=:s_id", {
+                    "s_id": student[1]
+                }).fetchall()[0][0]
+            info = [
+                student[2], student[9], student[10], student[7], school,
+                student[11]
+            ]
+            students_list.append(info)
+        return render_template("district-admin/students.html",
+                               students=students_list)
+
+
+@app.route("/district-admin/<string:d_code>/detail/student/<string:s_code>")
+@login_required
+def student_detail_admin(d_code, s_code):
+    user_info = c.execute("SELECT * FROM users WHERE user_id=:user_id", {
+        "user_id": session.get("user_id")
+    }).fetchall()
+    try:
+        district = c.execute("SELECT * FROM districts WHERE code=:code", {
+            "code": d_code
+        }).fetchall()[0][0]
+    except IndexError:
+        abort(403)
+
+    if request.method == "POST":
+        pass
+    else:
+
+        d_id = c.execute(
+            "SELECT district_id FROM districts WHERE code=:d_code", {
+                "d_code": d_code
+            }).fetchall()[0][0]
+
+        info = c.execute(
+            "SELECT * FROM users WHERE code=:s_code AND district_id=:d_id", {
+                "s_code": s_code,
+                "d_id": d_id
+            }).fetchall()
+
+        s_name = c.execute(
+            "SELECT name FROM schools WHERE district_id=:d_id AND school_id=:s_id",
+            {
+                "d_id": d_id,
+                "s_id": info[0][1]
+            }).fetchall()
+        # print(info)
+        print(info[0][0])
+        ts = c.execute(
+            "SELECT * FROM student_subject  JOIN teacher_subject ON teacher_subject.id=student_subject.teacher_subject_id JOIN courses ON subject_id=courses.course_id WHERE student_id=:s_id;",
+            {
+                "s_id": info[0][0]
+            }).fetchall()
+
+        print(ts)
+        # return str(info + ts) index # 4 - current, 5 - max
+        return render_template("district-admin/student-detail.html",
+                               info=info,
+                               ts=ts,
+                               s_name=s_name)
 
 
 @app.route("/district-admin/<string:d_code>/details/teacher/<string:t_code>",
            methods=["GET", "POST"])
+@login_required
 def district_admin_teacher_detail(d_code, t_code):
 
     if request.method == "POST":
@@ -1256,23 +1382,41 @@ def schedules(d_code):
             # loop through each row
             for i in range(2, sheet.max_row + 1):
                 # validate student id
-                student_id = c.execute("SELECT user_id FROM users WHERE code=:code", {"code": sheet.cell(row=i, column=1).value}).fetchall()
+                student_id = c.execute(
+                    "SELECT user_id FROM users WHERE code=:code", {
+                        "code": sheet.cell(row=i, column=1).value
+                    }).fetchall()
                 if len(student_id) == 0:
                     return "Student Code is NOT VALID"
                 # get elective wishes course id and store in a list
-                wishes = [sheet.cell(row=i, column=j).value for j in range(2, 8)]
+                wishes = [
+                    sheet.cell(row=i, column=j).value for j in range(2, 8)
+                ]
                 subs = []
                 for wish in wishes:
                     try:
-                        sub_id = c.execute("SELECT course_id FROM courses WHERE code=:code AND district_id=:d_id", {"code": wish, "d_id": d_id}).fetchall()[0][0]
+                        sub_id = c.execute(
+                            "SELECT course_id FROM courses WHERE code=:code AND district_id=:d_id",
+                            {
+                                "code": wish,
+                                "d_id": d_id
+                            }).fetchall()[0][0]
                     except IndexError:
-                        return render_template("error.html", title="Course not found")
+                        return render_template("error.html",
+                                               title="Course not found")
                     subs.append(sub_id)
                 # get already enrolled course's period and store in a list
-                ts_ids = c.execute("SELECT teacher_subject_id FROM student_subject WHERE student_id=:s_id", {"s_id": student_id[0][0]}).fetchall()
+                ts_ids = c.execute(
+                    "SELECT teacher_subject_id FROM student_subject WHERE student_id=:s_id",
+                    {
+                        "s_id": student_id[0][0]
+                    }).fetchall()
                 periods = []
                 for i in ts_ids:
-                    period = c.execute("SELECT period FROM teacher_subject WHERE id=:id", {"id": i}).fetchall()[0][0]
+                    period = c.execute(
+                        "SELECT period FROM teacher_subject WHERE id=:id", {
+                            "id": i
+                        }).fetchall()[0][0]
                     periods.append(period)
                 get_best_elective(subs, periods, student_id[0][0])
 

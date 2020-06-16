@@ -2,10 +2,20 @@ import unittest
 
 from app import app
 import os
-# import requests
 
 from time import sleep
 import io
+import random
+import string
+
+
+def random_string(digits=30):
+    random_str = ""
+    for i in range(digits):
+        char = random.choice(string.ascii_letters)
+        random_str += char
+
+    return random_str
 
 
 class BasicTestCase(unittest.TestCase):
@@ -67,8 +77,54 @@ class BasicTestCase(unittest.TestCase):
         assert b"Wrong credentials, please register before use the service" in rv.data
 
         # test login WITH correct credentials
-        rv = self.login("mogidek129@reqaxv.com", "mogidek129@reqaxv.com")
-        assert b"wonderful" in rv.data
+        rv = self.login("asg-demo@example.com", "ASGDemo")
+        assert b"Demo" in rv.data
+
+    def create_school(self, name, address, description, code):
+        self.login("asg-demo@example.com", "ASGDemo")
+        return self.app.post("/district-admin/ASGDemo/schools",
+                             data=dict(name=name,
+                                       address=address,
+                                       description=description,
+                                       code=code))
+
+    def test_create_school(self):
+        """Test for ability to successfully create school"""
+        self.login("asg-demo@example.com", "ASGDemo")
+        # try create school without provide name of the school
+        rv = self.create_school(
+            "", "somewhere", "somedescription", "code"
+        )  # will create 400 eror because it will try to check excel file exist or not
+        assert (rv.status_code == 400)
+
+        # try create school without provide address of the school
+        rv = self.create_school(
+            "someschool", "", "somedescription", "code"
+        )  # will create 400 eror because it will try to check excel file exist or not
+        assert (rv.status_code == 400)
+
+        # try create school without provide description of the school
+        rv = self.create_school(
+            "someschool", "schoolwhere", "", "code"
+        )  # will create 400 eror because it will try to check excel file exist or not
+        assert (rv.status_code == 400)
+
+        # try create school without provide code of the school
+        rv = self.create_school(
+            "someschool", "someaddress", "somedescription", ""
+        )  # will create 400 eror because it will try to check excel file exist or not
+        assert (rv.status_code == 400)
+
+        # try create school provide code of the school
+        rv = self.create_school("someschool", "someaddress", "somedescription",
+                                "")
+        assert (rv.status_code == 400)
+
+        # try successful create a school
+        rv = self.create_school(random_string(digits=10),
+                                random_string(digits=10),
+                                random_string(digits=10), "")
+        assert (rv.status_code == 200)
 
 
 if __name__ == '__main__':
